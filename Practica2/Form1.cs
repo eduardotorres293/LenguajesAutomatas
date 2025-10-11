@@ -142,7 +142,8 @@ namespace Practica2
                 i_caracter == 94 || i_caracter == 123 ||
                 i_caracter == 124 || i_caracter == 125)
             {
-                elemento = ((char)i_caracter).ToString() + " Símbolo\n";
+                // write only the symbol on its own line (no extra text)
+                elemento = ((char)i_caracter).ToString() + "\n";
             }
             else { Error(i_caracter); }
         }
@@ -175,13 +176,14 @@ namespace Practica2
         private void Archivo_Libreria()
         {
             i_caracter = Leer.Read();
-            if ((char)i_caracter == 'h') { elemento = "Archivo Libreria\n"; i_caracter = Leer.Read(); }
+            if ((char)i_caracter == 'h') { Escribir.Write("libreria\n"); i_caracter = Leer.Read(); }
             else { Error(i_caracter); }
         }
 
         private bool Palabra_Reservada()
         {
-            if (P_Reservadas.IndexOf(elemento) >= 0) return true;
+            // compare in lowercase to match the reserved list
+            if (P_Reservadas.IndexOf(elemento.ToLower()) >= 0) return true;
             return false;
         }
         private void Identificador()
@@ -192,11 +194,11 @@ namespace Practica2
                 i_caracter = Leer.Read();
             } while (Tipo_caracter(i_caracter) == 'l' || Tipo_caracter(i_caracter) == 'd');
 
-            if ((char)i_caracter == '.') { Archivo_Libreria(); } // Si es .h
+            if ((char)i_caracter == '.') { Archivo_Libreria(); }
             else
             {
-                if (Palabra_Reservada()) elemento = "Palabra Reservada\n";
-                else elemento = "Identificador\n";
+                if (Palabra_Reservada()) Escribir.Write(elemento.ToLower() + "\n");
+                else Escribir.Write("identificador\n");
             }
         }
 
@@ -208,7 +210,7 @@ namespace Practica2
             {
                 i_caracter = Leer.Read();
             } while (Tipo_caracter(i_caracter) == 'd');
-            elemento = "Numero real\n";
+            Escribir.Write("numero\n");
         }
         private void Numero()
         {
@@ -219,7 +221,7 @@ namespace Practica2
             if ((char)i_caracter == '.') { Numero_Real(); }
             else
             {
-                elemento = "Numero entero\n";
+                Escribir.Write("numero\n");
             }
 
         }
@@ -227,7 +229,7 @@ namespace Practica2
         private void richTextBox1_TextChanged(object sender, EventArgs e)
         {
             analizarToolStripMenuItem.Enabled = true;
-            
+
         }
 
         private bool Comentario()
@@ -295,8 +297,8 @@ namespace Practica2
 
                 switch (Tipo_caracter(i_caracter))
                 {
-                    case 'l': Identificador(); Escribir.Write(elemento); break;
-                    case 'd': Numero(); Escribir.Write(elemento); break;
+                    case 'l': Identificador(); break; // Identificador already writes the token
+                    case 'd': Numero(); break;       // Numero already writes the token
                     case 's': Simbolo(); Escribir.Write(elemento); i_caracter = Leer.Read(); break;
                     case '"': Cadena(); Escribir.Write("Cadena\n"); i_caracter = Leer.Read(); break;
                     case 'c': Caracter(); Escribir.Write("Caracter\n"); i_caracter = Leer.Read(); break;
@@ -334,6 +336,7 @@ namespace Practica2
             Leer = new StreamReader(archivoback);
             Cabecera();
         }
+
 
 
         private int Directiva_include()
