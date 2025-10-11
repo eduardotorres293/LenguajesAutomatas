@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -24,7 +25,7 @@ namespace Practica2
         {
             "auto", "break", "case", "char", "const", "continue", "default", "do",
             "double", "else", "enum", "extern", "float", "for", "goto", "if", "include",
-            "inline", "int", "long", "register", "restrict", "return", "short",
+            "inline", "int", "long", "main", "register", "restrict", "return", "short",
             "signed", "sizeof", "static", "struct", "switch", "typedef", "union",
             "unsigned", "void", "volatile", "while", "_Alignas", "_Alignof",
             "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary", "_Noreturn",
@@ -115,49 +116,35 @@ namespace Practica2
 
         private char Tipo_caracter(int caracter)
         {
-            if (caracter >= 65 && caracter <= 90 || caracter >= 97 && caracter <= 122) { return 'l'; } //letra 
+            if (caracter >= 65 && caracter <= 90 || caracter >= 97 && caracter <= 122) return 'l'; // Letra
+            else if (caracter >= 48 && caracter <= 57) return 'd'; // Dígito
             else
             {
-                if (caracter >= 48 && caracter <= 57) { return 'd'; } //digito 
-                else
+                switch (caracter)
                 {
-                    switch (caracter)
-                    {
-                        case 10: return 'n'; //salto de linea
-                        case 34: return '"'; //inicio de cadena
-                        case 39: return 'c'; //inicio de caracter
-                        case 32: return 'e'; //espacio
-                        case 47: return '/';
-
-                        default: return 's';//simbolo
-                    }
-                    ;
-
+                    case 10: return 'n'; // Salto de línea
+                    case 34: return '"'; // Comillas dobles
+                    case 39: return 'c'; // Comilla simple
+                    case 32: return 'e'; // Espacio
+                    case 47: return '/'; // Posible comentario
+                    default: return 's'; // Otro símbolo
                 }
             }
-
         }
         private void Simbolo()
         {
             if (i_caracter == 33 ||
                 i_caracter >= 35 && i_caracter <= 38 ||
-                i_caracter >= 40 && i_caracter <= 46 || // ahora incluye '.' (46)
+                i_caracter >= 40 && i_caracter <= 45 ||
                 i_caracter == 47 ||
                 i_caracter >= 58 && i_caracter <= 62 ||
-                i_caracter == 91 ||
-                i_caracter == 93 ||
-                i_caracter == 94 ||
-                i_caracter == 123 ||
-                i_caracter == 124 ||
-                i_caracter == 125
-                )
+                i_caracter == 91 || i_caracter == 93 ||
+                i_caracter == 94 || i_caracter == 123 ||
+                i_caracter == 124 || i_caracter == 125)
             {
                 elemento = ((char)i_caracter).ToString() + " Símbolo\n";
             }
-            else
-            {
-                Error(i_caracter);
-            }
+            else { Error(i_caracter); }
         }
 
 
@@ -179,41 +166,18 @@ namespace Practica2
             if (i_caracter != 39) Error(39);
         }
 
-        private void Error(int caracter)
+        private void Error(int i_caracter)
         {
-            richTextBox2.AppendText("Error léxico: " + (char)caracter + " en línea " + Numero_linea + "\n");
-            N_error++;
-        }
-
-        private void Error(string mensaje)
-        {
-            richTextBox2.AppendText("Error sintáctico: " + mensaje + " en línea " + Numero_linea + "\n");
+            richTextBox2.AppendText("Error léxico " + (char)i_caracter + ", línea " + Numero_linea + "\n");
             N_error++;
         }
 
         private void Archivo_Libreria()
         {
-            string nombre = "";
-            // i_caracter ya está posicionado en el primer caracter después de '<'
-            while (i_caracter != -1 && (char)i_caracter != '>')
-            {
-                nombre += (char)i_caracter;
-                i_caracter = Leer.Read();
-            }
-
-            if (i_caracter == '>')
-            {
-                elemento = nombre.Trim();
-                Escribir.WriteLine($"Archivo {elemento}"); // registra Archivo stdio.h
-                                                           // NOTA: no hacemos i_caracter = Leer.Read() aquí, lo hace el llamador después de escribir "Simbolo >"
-            }
-            else
-            {
-                Error("Se esperaba '>' al final de archivo de librería");
-            }
+            i_caracter = Leer.Read();
+            if ((char)i_caracter == 'h') { elemento = "Archivo Libreria\n"; i_caracter = Leer.Read(); }
+            else { Error(i_caracter); }
         }
-
-
 
         private bool Palabra_Reservada()
         {
@@ -222,22 +186,17 @@ namespace Practica2
         }
         private void Identificador()
         {
-            string lex = "";
             do
             {
-                lex += (char)i_caracter;
+                elemento = elemento + (char)i_caracter;
                 i_caracter = Leer.Read();
             } while (Tipo_caracter(i_caracter) == 'l' || Tipo_caracter(i_caracter) == 'd');
 
-            elemento = lex;
-
-            if (Palabra_Reservada())
-            {
-                Escribir.WriteLine($"PalabraReservada {elemento}");
-            }
+            if ((char)i_caracter == '.') { Archivo_Libreria(); } // Si es .h
             else
             {
-                Escribir.WriteLine($"Identificador {elemento}");
+                if (Palabra_Reservada()) elemento = "Palabra Reservada\n";
+                else elemento = "Identificador\n";
             }
         }
 
@@ -309,279 +268,124 @@ namespace Practica2
         private void analizarToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBox2.Text = "";
-            guardar(); elemento = "";
-            N_error = 0; Numero_linea = 1;
+            guardar();
+
+            elemento = "";
+            N_error = 0;
+            Numero_linea = 1;
+
             archivoback = archivo.Remove(archivo.Length - 1) + "back";
             Escribir = new StreamWriter(archivoback);
             Leer = new StreamReader(archivo);
+
             i_caracter = Leer.Read();
+
             do
             {
                 elemento = "";
+
                 if ((char)i_caracter == '/')
                 {
                     if (Comentario())
                     {
-                        Escribir.WriteLine("Comentario\n");
+                        Escribir.Write("Comentario\n");
                         continue;
                     }
                 }
+
                 switch (Tipo_caracter(i_caracter))
                 {
-                    case 'l':
-                        Identificador();
-                        break;
-
-                    case 'd':
-                        Numero();
-                        Escribir.WriteLine($"Numero {elemento}"); // "Numero 123"
-                        break;
-
-                    case 's':
-                        if ((char)i_caracter == '<')
-                        {
-                            // inicio de <archivo>
-                            Escribir.WriteLine("Simbolo <");
-                            i_caracter = Leer.Read(); // avanzar al contenido dentro de < >
-                            Archivo_Libreria();       // escribe "Archivo nombre.ext"
-                            if (i_caracter == '>')
-                            {
-                                Escribir.WriteLine("Simbolo >");
-                                i_caracter = Leer.Read(); // avanzar después de '>'
-                            }
-                            else
-                            {
-                                Error("Se esperaba '>' al final de archivo de librería");
-                            }
-                        }
-                        else
-                        {
-                            Simbolo();
-                            Escribir.WriteLine($"Simbolo {elemento.Trim()}");
-                            i_caracter = Leer.Read();
-                        }
-                        break;
-
-
-                    case '"': Cadena(); Escribir.WriteLine("Cadena\n"); i_caracter = Leer.Read(); break;
-                    case 'c': Caracter(); Escribir.WriteLine("Caracter\n"); i_caracter = Leer.Read(); break;
-                    case 'n': i_caracter = Leer.Read(); Numero_linea++; break;
+                    case 'l': Identificador(); Escribir.Write(elemento); break;
+                    case 'd': Numero(); Escribir.Write(elemento); break;
+                    case 's': Simbolo(); Escribir.Write(elemento); i_caracter = Leer.Read(); break;
+                    case '"': Cadena(); Escribir.Write("Cadena\n"); i_caracter = Leer.Read(); break;
+                    case 'c': Caracter(); Escribir.Write("Caracter\n"); i_caracter = Leer.Read(); break;
+                    case 'n': i_caracter = Leer.Read(); Numero_linea++; Escribir.Write("LF\n"); break;
                     case 'e': i_caracter = Leer.Read(); break;
                     default: Error(i_caracter); break;
                 }
-                ;
-
             } while (i_caracter != -1);
+
+            Escribir.Write("Fin\n");
 
             richTextBox2.AppendText("Errores: " + N_error);
             Escribir.Close();
             Leer.Close();
-            AnalizadorSintactico();
         }
-        private void directivainclude_proc()
+        /**private void directivainclude_proc()
         {
-            directiva_include();
+            Directiva_include();
         }
 
         private void Cabecera()
         {
             token = Leer.ReadLine();
-
-            if (token == null) return;
-
             switch (token)
             {
-                case "PalabraReservada":
-                    if (lexema == "int" || lexema == "float" || lexema == "char")
-                    {
-                        Declaracion();
-                    }
-                    break;
-                case "#": directivainclude_proc(); break;
-
+                case "#": Directiva_proc(); break;
                 case "LF": Numero_linea++; token = Leer.ReadLine(); break;
-
-                case "Tipo":
-                    break;
-
-                default: token = Leer.ReadLine(); break;
+                case "Tipo": Declaracion(); break;
             }
         }
 
         private void AnalizadorSintactico()
         {
-            if (!File.Exists(archivoback))
-            {
-                Error("Archivo de respaldo no encontrado");
-                return;
-            }
-
+            Numero_linea = 0;
             Leer = new StreamReader(archivoback);
-            NextToken();
-
-            while (token != null)
-            {
-                if (token == "PalabraReservada")
-                {
-                    if (lexema == "int" || lexema == "float" || lexema == "char")
-                    {
-                        Declaracion();
-                    }
-                    else
-                    {
-                        NextToken();
-                    }
-                }
-                else if (token == "Simbolo" && lexema == "#")
-                {
-                    directiva_proc();
-                }
-                else
-                {
-                    NextToken();
-                }
-            }
-
-
-            Leer.Close();
+            Cabecera();
         }
 
 
-        private void directiva_include()
+        private int Directiva_include()
         {
-            // Aquí asumimos que lexema == "include" (directiva_proc ya avanzó)
-            if (lexema != "include")
+            token = Leer.ReadLine();
+            if (token == "include")
             {
-                Error("Se esperaba 'include' después de '#'");
-                return;
-            }
-
-            // Avanzar para leer lo que sigue a 'include' (debe ser '<' o una cadena)
-            NextToken();
-            if (token == null) return;
-
-            // Caso: #include <archivo>
-            if (tipoToken == "Simbolo" && lexema == "<")
-            {
-                // leer nombre de archivo (tipoToken debe ser "Archivo")
-                NextToken();
-                if (token == null) return;
-
-                if (tipoToken == "Archivo")
+                token = Leer.ReadLine();
+                switch (token)
                 {
-                    // ahora esperamos el símbolo '>'
-                    NextToken();
-                    if (token == null) return;
-
-                    if (tipoToken == "Simbolo" && lexema == ">")
-                    {
-                        NextToken(); // avanzar después de '>'
-                        return;
-                    }
-                    else
-                    {
-                        Error("\">\" esperado en directiva include");
-                        return;
-                    }
-                }
-                else
-                {
-                    Error("Nombre de librería esperado");
-                    return;
+                    case "<":
+                        token = Leer.ReadLine();
+                        if (token == "libreria")
+                        {
+                            token = Leer.ReadLine();
+                            if (token == ">")
+                            {
+                                token = Leer.ReadLine();
+                            }
+                            else
+                            {
+                                Error(">"); return 0;
+                            }
+                        }
+                        else
+                        {
+                            Error(token); return 0;
+                        }
+                        break;
+                    case "cadena": token = Leer.ReadLine(); return 0;
+                    default: Error("Libreria"); return 0;
                 }
             }
-            // Caso: #include "archivo.h"
-            else if (tipoToken == "Cadena")
-            {
-                NextToken(); // aceptar la cadena y seguir
-                return;
-            }
-            else
-            {
-                Error("Formato de include no reconocido");
-                return;
-            }
+            return 1;
         }
 
-
-
-        private void directiva_proc()
+        private int Directiva_proc()
         {
-            NextToken();
-            if (token == null) return;
-
-            switch (lexema)
+            switch (token)
             {
-                case "include":
-                    directiva_include();
-                    break;
+                case "include": Directiva_include(); break;
                 case "define":
-                    NextToken(); // saltar nombre de macro
-                    break;
-                default:
-                    Error("Directiva de procesador desconocida: " + lexema);
-                    break;
+                default: Error("Directiva de procesador"); return 0;
             }
-        }
-
-
-
-        private void NextToken()
-        {
-            string linea = Leer.ReadLine();
-            if (linea == null)
-            {
-                token = null;
-                return;
-            }
-
-            string[] partes = linea.Split(' ');
-            tipoToken = partes[0].Trim();
-            lexema = partes.Length > 1 ? partes[1].Trim() : "";
-            token = tipoToken; // compatibilidad con parser
+            return 1;
         }
 
 
 
         private void Declaracion()
         {
-            string tipo = lexema; // int, float, etc.
-            NextToken();
 
-            if (token == "Identificador")
-            {
-                string nombre = lexema;
-                NextToken();
-
-                if (token == "Simbolo" && lexema == "(")
-                {
-                    // Es una función, no variable
-                    richTextBox2.AppendText($"Declaración de función: {tipo} {nombre}()\n");
-
-                    // Saltar parámetros hasta ')'
-                    while (!(token == "Simbolo" && lexema == ")") && token != null)
-                    {
-                        NextToken();
-                    }
-                    NextToken(); // leer el '{' después de ')'
-                }
-                else if (token == "Simbolo" && lexema == ";")
-                {
-                    // Declaración normal de variable
-                    richTextBox2.AppendText($"Declaración: {tipo} {nombre};\n");
-                    NextToken();
-                }
-                else
-                {
-                    Error("Falta ';' en declaración");
-                }
-            }
-            else
-            {
-                Error("Se esperaba un identificador en declaración");
-            }
-        }
-
-
+        }**/
     }
 }
