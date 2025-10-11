@@ -172,6 +172,12 @@ namespace Practica2
             richTextBox2.AppendText("Error léxico " + (char)i_caracter + ", línea " + Numero_linea + "\n");
             N_error++;
         }
+        private void Error(string mensaje)
+        {
+            richTextBox2.AppendText("Error: " + mensaje + ", línea " + Numero_linea + "\n");
+            N_error++;
+        }
+
 
         private void Archivo_Libreria()
         {
@@ -297,8 +303,8 @@ namespace Practica2
 
                 switch (Tipo_caracter(i_caracter))
                 {
-                    case 'l': Identificador(); break; // Identificador already writes the token
-                    case 'd': Numero(); break;       // Numero already writes the token
+                    case 'l': Identificador(); break;
+                    case 'd': Numero(); break;
                     case 's': Simbolo(); Escribir.Write(elemento); i_caracter = Leer.Read(); break;
                     case '"': Cadena(); Escribir.Write("Cadena\n"); i_caracter = Leer.Read(); break;
                     case 'c': Caracter(); Escribir.Write("Caracter\n"); i_caracter = Leer.Read(); break;
@@ -313,82 +319,197 @@ namespace Practica2
             richTextBox2.AppendText("Errores: " + N_error);
             Escribir.Close();
             Leer.Close();
-        }
-        /**private void directivainclude_proc()
-        {
-            Directiva_include();
+            AnalizadorSintactico();
         }
 
         private void Cabecera()
         {
             token = Leer.ReadLine();
+
+            if (token == null || token == "Fin")
+                return;
+
             switch (token)
             {
-                case "#": Directiva_proc(); break;
-                case "LF": Numero_linea++; token = Leer.ReadLine(); break;
-                case "Tipo": Declaracion(); break;
+                case "#":
+                    token = Leer.ReadLine();
+                    if (token == null)
+                    {
+                        Error("Directiva incompleta después de '#'");
+                        return;
+                    }
+
+                    Directiva_proc();
+                    Cabecera();
+                    break;
+
+                case "LF":
+                    Numero_linea++;
+                    Cabecera();
+                    break;
+
+                case "int":
+                case "Tipo":
+                    Declaracion();
+                    Cabecera();
+                    break;
+
+                default:
+                    Cabecera();
+                    break;
             }
         }
 
+
         private void AnalizadorSintactico()
         {
-            Numero_linea = 0;
+            Numero_linea = 1;
             Leer = new StreamReader(archivoback);
+            token = Leer.ReadLine();
             Cabecera();
+            Leer.Close();
         }
-
-
 
         private int Directiva_include()
         {
-            token = Leer.ReadLine();
-            if (token == "include")
+            if (token == "<")
             {
                 token = Leer.ReadLine();
-                switch (token)
+                if (token == "libreria")
                 {
-                    case "<":
+                    token = Leer.ReadLine();
+                    if (token == ">")
+                    {
+                        return 1;
+                    }
+                    else
+                    {
+                        Error("Falta '>' en include");
+                        return 0;
+                    }
+                }
+                else
+                {
+                    Error("Falta nombre de librería");
+                    return 0;
+                }
+            }
+            else if (token == "Cadena" || token == "cadena")
+            {
+                return 1;
+            }
+            else
+            {
+                Error("Sintaxis de include inválida");
+                return 0;
+            }
+        }
+
+        private int Directiva_proc()
+        {
+            while (token == "LF")
+            {
+                token = Leer.ReadLine();
+            }
+
+            if (token == null)
+            {
+                Error("Directiva incompleta después de '#'");
+                return 0;
+            }
+
+            switch (token)
+            {
+                case "include":
+                    token = Leer.ReadLine();
+                    while (token == "LF") token = Leer.ReadLine();
+                    if (token == null)
+                    {
+                        Error("Include incompleto");
+                        return 0;
+                    }
+                    return Directiva_include();
+
+                case "define":
+                    token = Leer.ReadLine();
+                    while (token == "LF") token = Leer.ReadLine();
+                    if (token == null)
+                    {
+                        Error("Directiva 'define' incompleta. Formato sugerido: # define IDENTIFICADOR VALOR");
+                        return 0;
+                    }
+
+                    if (token == "<")
+                    {
                         token = Leer.ReadLine();
                         if (token == "libreria")
                         {
                             token = Leer.ReadLine();
                             if (token == ">")
                             {
-                                token = Leer.ReadLine();
+                                return 1;
                             }
                             else
                             {
-                                Error(">"); return 0;
+                                Error("Falta '>' en define con librería");
+                                return 0;
                             }
                         }
                         else
                         {
-                            Error(token); return 0;
+                            Error("Nombre de librería inválido en define");
+                            return 0;
                         }
-                        break;
-                    case "cadena": token = Leer.ReadLine(); return 0;
-                    default: Error("Libreria"); return 0;
-                }
+                    }
+                    else
+                    {
+                        string posibleValor = Leer.ReadLine();
+                        return 1;
+                    }
+
+                default:
+                    Error("Se esperaba 'include' o 'define' después de '#'");
+                    return 0;
             }
-            return 1;
         }
-
-        private int Directiva_proc()
-        {
-            switch (token)
-            {
-                case "include": Directiva_include(); break;
-                case "define":
-                default: Error("Directiva de procesador"); return 0;
-            }
-            return 1;
-        }
-
-
 
         private void Declaracion()
         {
+            token = Leer.ReadLine();
 
-        }**/
+            if (token == "identificador")
+            {
+                token = Leer.ReadLine();
+
+                if (token == ";")
+                {
+
+                }
+                else if (token == "main") 
+                {
+                    do
+                    {
+                        token = Leer.ReadLine();
+                        if (token == null || token == "Fin") break;
+                    } while (token != "{");
+                }
+                else
+                {
+                    Error("Falta ';' en declaración");
+                }
+            }
+            else if (token == "main")
+            {
+                do
+                {
+                    token = Leer.ReadLine();
+                    if (token == null || token == "Fin") break;
+                } while (token != "{");
+            }
+            else
+            {
+                Error("Falta identificador en declaración");
+            }
+        }
     }
 }
