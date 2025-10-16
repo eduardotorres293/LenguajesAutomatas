@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading;
@@ -178,6 +179,12 @@ namespace Practica2
             N_error++;
         }
 
+        private void Error(string token, string esperado)
+        {
+            richTextBox2.AppendText($"Error: se esperaba '{esperado}', pero se encontró '{token}', línea {Numero_linea}\n");
+            N_error++;
+        }
+
 
         private void Archivo_Libreria()
         {
@@ -322,6 +329,7 @@ namespace Practica2
             AnalizadorSintactico();
         }
 
+        // Inicio analisis sintactico
         private void Cabecera()
         {
             token = Leer.ReadLine();
@@ -485,7 +493,7 @@ namespace Practica2
                 {
 
                 }
-                else if (token == "main") 
+                else if (token == "main")
                 {
                     do
                     {
@@ -511,5 +519,137 @@ namespace Practica2
                 Error("Falta identificador en declaración");
             }
         }
+        private void D_Arreglos()
+        {
+            while (token == "[")
+            {
+                token = Leer.ReadLine();
+                if (token == "identificador" || token == "numero_entero")
+                {
+                    token = Leer.ReadLine();
+                    {
+                        if (token == "]")
+                        {
+                            token = Leer.ReadLine();
+                        }
+                        else
+                        {
+                            Error(token, "]");
+                        }
+                    }
+                }
+                else
+                {
+                    Error(token, "valor de longitud de dimension");
+                }
+            }
+            switch(token)
+            {
+                case ";": token = Leer.ReadLine(); break;
+                case "=": token = Leer.ReadLine();
+                    if (token == "{")
+                    {
+                        Bloque_Inicializacion();
+                        if (token == ";")
+                        {
+                            token = Leer.ReadLine();
+                        }
+                        else
+                        {
+                            Error(token, ";");
+                        }
+                    }
+                    else
+                    {
+                        Error(token, "{");
+                    }
+                    break;
+                default: Error(token, "declaracion valida para arreglos"); break;
+            }
+        }
+        private int Constante()
+        {
+            token = Leer.ReadLine();
+            switch(token)
+            {
+                case "-": token = Leer.ReadLine();
+                    if (token == "numero_real" || token == "numero_entero" || token == "identificador") return 1;
+                    else return 0;
+                case "numero_real": return 1;
+                case "numero_entero": return 1;
+                case "caracter": return 1;
+                case "identificador": return 1;
+                default: return 0;
+            }
+        }
+        private void Dec_VGlobal()
+        {
+            token = Leer.ReadLine();
+            switch (token)
+            {
+                case "=":
+                    if(Constante() == 1)
+                    {
+                        token = Leer.ReadLine();
+                        if(token == ";")
+                        {
+                            token = Leer.ReadLine();
+                        }
+                        else
+                        {
+                            Error(token, ";");
+                        }
+                    }
+                    else
+                    {
+                        Error(token, "inicialización global válida");
+                    }
+                break;
+                case "[": D_Arreglos(); break;
+                case ";": token = Leer.ReadLine(); break;
+                default: Error(token, ";"); break;
+            }
+        }
+        private void Bloque_Inicializacion()
+        {
+            token = Leer.ReadLine();
+
+            if (token == null)
+            {
+                Error("Bloque de inicialización incompleto");
+                return;
+            }
+
+            while (token != "}")
+            {
+                if (token == "numero_entero" || token == "numero_real" || token == "caracter" || token == "identificador")
+                {
+                    token = Leer.ReadLine();
+
+                    if (token == ",")
+                    {
+                        token = Leer.ReadLine();
+                        continue;
+                    }
+                    else if (token == "}")
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Error(token, "',' o '}'");
+                        return;
+                    }
+                }
+                else
+                {
+                    Error(token, "valor de inicialización válido");
+                    return;
+                }
+            }
+
+            token = Leer.ReadLine();
+        }
+
     }
 }
