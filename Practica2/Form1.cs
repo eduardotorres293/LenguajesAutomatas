@@ -122,30 +122,24 @@ namespace Practica2
             }
         }
 
-        // --- Simbolo: ahora consume 1 caracter (no lee más). Si es símbolo válido devuelve elemento,
-        //     si no lo es marca error léxico pero igualmente produce un token de símbolo para que el parser no quede estancado.
         private void Simbolo()
         {
             char ch = (char)i_caracter;
             elemento = ch.ToString() + "\n";
 
-            // Lista de símbolos válidos en tu implementación original (expandida a comas y punto y coma etc.)
             if (i_caracter == '!' ||
-                (i_caracter >= 35 && i_caracter <= 38) || // # $ % &
-                (i_caracter >= 40 && i_caracter <= 45) || // ( ) * + , - .
-                i_caracter == 47 || // /
-                (i_caracter >= 58 && i_caracter <= 62) || // : ; < = >
-                i_caracter == 91 || i_caracter == 93 || // [ ]
+                (i_caracter >= 35 && i_caracter <= 38) ||
+                (i_caracter >= 40 && i_caracter <= 45) ||
+                i_caracter == 47 ||
+                (i_caracter >= 58 && i_caracter <= 62) ||
+                i_caracter == 91 || i_caracter == 93 ||
                 i_caracter == 94 || i_caracter == 123 ||
-                i_caracter == 124 || i_caracter == 125 || // ^ { | }
+                i_caracter == 124 || i_caracter == 125 ||
                 i_caracter == ',' || i_caracter == ';' || i_caracter == '<' || i_caracter == '>' || i_caracter == '='
                 )
-            {
-                // aceptado como símbolo
-            }
+            { }
             else
             {
-                // símbolo fuera de contexto (ej: @, etc.)
                 Error($"Símbolo inesperado '{ch}'");
             }
         }
@@ -163,10 +157,8 @@ namespace Practica2
 
         private void Caracter()
         {
-            // lee apertura de comilla simple (se asume ya leída antes)
             i_caracter = Leer.Read();
             if (i_caracter == -1) { Error("Carácter incompleto"); return; }
-            // lee posible contenido del caracter
             i_caracter = Leer.Read();
             if (i_caracter != 39) Error(39);
         }
@@ -175,9 +167,9 @@ namespace Practica2
         {
             richTextBox2.AppendText("Error léxico " + (char)i_caracter + ", línea " + Numero_linea + "\n");
             N_error++;
-            // aseguramos que el analizador avance: consumir el caracter problemático
             i_caracter = Leer.Read();
         }
+
         private void Error(string mensaje)
         {
             richTextBox2.AppendText("Error: " + mensaje + ", línea " + Numero_linea + "\n");
@@ -321,11 +313,10 @@ namespace Practica2
                     case 's':
                         Simbolo();
                         Escribir.Write(elemento);
-                        // avanzamos un caracter (si Error(...) ya lo avanzó, evitar doble lectura)
-                        if (Tipo_caracter(i_caracter) == 's') // si no cambió
+                        if (Tipo_caracter(i_caracter) == 's')
                             i_caracter = Leer.Read();
                         else
-                            i_caracter = Leer.Read(); // mantenemos avance normal
+                            i_caracter = Leer.Read();
                         break;
                     case '"': Cadena(); Escribir.Write("Cadena\n"); i_caracter = Leer.Read(); break;
                     case 'c': Caracter(); Escribir.Write("Caracter\n"); i_caracter = Leer.Read(); break;
@@ -353,7 +344,7 @@ namespace Practica2
                         token = Leer.ReadLine();
                         if (token == "include" || token == "define")
                         {
-                            Directiva_proc(); // Procesa correctamente include/define
+                            Directiva_proc();
                         }
                         else
                         {
@@ -374,7 +365,6 @@ namespace Practica2
                         break;
 
                     default:
-                        // Si el token no pertenece a una cabecera válida
                         if (token != null && token != "Fin")
                             Error($"Token inesperado en cabecera: '{token}'");
                         break;
@@ -382,7 +372,6 @@ namespace Practica2
                 token = Leer.ReadLine();
             }
         }
-
 
         private void AnalizadorSintactico()
         {
@@ -457,7 +446,7 @@ namespace Practica2
                 }
                 else if (token == "Cadena")
                 {
-                    return 1; // include "algo.h"
+                    return 1;
                 }
                 else
                 {
@@ -467,7 +456,6 @@ namespace Practica2
             }
             else if (token == "define")
             {
-                // Aquí puedes validar el formato de define si lo deseas
                 return 1;
             }
             else
@@ -477,10 +465,8 @@ namespace Practica2
             }
         }
 
-
         private void Declaracion()
         {
-            // token ya está en el tipo (ej. "int"), leemos siguiente
             token = Leer.ReadLine();
 
             if (token == null)
@@ -499,11 +485,9 @@ namespace Practica2
                     return;
                 }
 
-                // --- Detección explícita de errores comunes (falta '=': ej. "float b-3.1415;")
                 if (token == "-")
                 {
                     Error("Falta '=' en la asignación; se encontró '-' inmediatamente después del identificador");
-                    // intentar sincronizar: consumir hasta LF o ';'
                     while (token != null && token != ";" && token != "LF" && token != "Fin")
                     {
                         token = Leer.ReadLine();
@@ -531,14 +515,10 @@ namespace Practica2
                         return;
 
                     case "[":
-                        // Antes de procesar el arreglo, miramos si hay '=' o inicialización sin '='
                         D_Arreglos();
-
-                        // Si justo después de las dimensiones aparece '{', significa que no hubo '='
                         if (token == "{")
                         {
                             Error("Falta '=' antes de la inicialización del arreglo");
-                            // Saltar toda la inicialización hasta el ';' para evitar cascada de errores
                             int nivel = 1;
                             while ((token = Leer.ReadLine()) != null && token != "Fin" && nivel > 0)
                             {
@@ -549,11 +529,7 @@ namespace Practica2
                         }
                         return;
 
-
-
-
                     case "(":
-                        // función o prototipo: saltar hasta '{' o ';'
                         do
                         {
                             token = Leer.ReadLine();
@@ -565,7 +541,6 @@ namespace Practica2
 
                     default:
                         Error("Falta ';' en declaración o token inesperado después del identificador");
-                        // sincronizar: avanzar hasta ; o LF
                         while (token != null && token != ";" && token != "LF" && token != "Fin")
                             token = Leer.ReadLine();
                         if (token == ";") token = Leer.ReadLine();
@@ -588,11 +563,9 @@ namespace Practica2
 
         private void D_Arreglos()
         {
-            // Se espera una o varias dimensiones: [ numero ] [ numero ] ...
             token = Leer.ReadLine();
             if (token == null) { Error("Declaración de arreglo incompleta"); return; }
 
-            // --- Procesar dimensiones ---
             while (true)
             {
                 if (token != "numero")
@@ -623,7 +596,6 @@ namespace Practica2
                 break;
             }
 
-            // --- Caso: falta '=' antes del inicializador ---
             if (token == "{")
             {
                 Error("Falta '=' antes de la inicialización del arreglo");
@@ -652,7 +624,6 @@ namespace Practica2
                 return;
             }
 
-            // --- Inicialización correcta con '=' ---
             if (token == "=")
             {
                 string prevToken = null;
@@ -672,7 +643,7 @@ namespace Practica2
                     else if (token == "}")
                     {
                         nivel--;
-                        if (nivel < 0) nivel = 0; // protección
+                        if (nivel < 0) nivel = 0;
                         if (nivel == 0) dentroArreglo = false;
                     }
                     else if (token == "numero" || token == "numero_real" || token == "identificador" || token == "caracter")
@@ -689,7 +660,6 @@ namespace Practica2
                     {
                         if (nivel > 0)
                         {
-                            // sólo se reporta si aún hay llaves abiertas
                             Error("Falta '}' antes de ';' en la inicialización del arreglo");
                         }
                         break;
@@ -707,7 +677,6 @@ namespace Practica2
                     return;
                 }
 
-                // Avanzar al siguiente token después del cierre y ';'
                 if (token != ";")
                 {
                     while (token != null && token != ";" && token != "Fin")
@@ -717,7 +686,6 @@ namespace Practica2
                 return;
             }
 
-            // --- Si no hay inicialización, sólo debe terminar en ';' ---
             if (token != ";")
             {
                 while (token != null && token != ";" && token != "Fin")
@@ -748,7 +716,6 @@ namespace Practica2
 
         private void Dec_VGlobal()
         {
-            // Aquí ya se leyó '=' en Declaracion y se llamó a este método
             token = Leer.ReadLine();
             if (token == null)
             {
@@ -779,7 +746,6 @@ namespace Practica2
             }
             else if (token == "[")
             {
-                // arreglo después del '='? improbable sintácticamente, pero lo manejamos
                 D_Arreglos();
             }
             else if (token == ";")
@@ -789,7 +755,6 @@ namespace Practica2
             else
             {
                 Error("Token inesperado en inicialización global: " + token);
-                // sincronizar hasta ;
                 while (token != null && token != ";" && token != "Fin")
                     token = Leer.ReadLine();
                 if (token == ";") token = Leer.ReadLine();
