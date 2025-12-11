@@ -333,7 +333,6 @@ namespace Practica2
             Leer.Close();
             AnalizadorSintactico();
         }
-
         private void Cabecera()
         {
             while (token != null && token != "Fin")
@@ -341,19 +340,14 @@ namespace Practica2
                 switch (token)
                 {
                     case "#":
-                        token = Leer.ReadLine();
-                        if (token == "include" || token == "define")
-                        {
-                            Directiva_proc();
-                        }
-                        else
-                        {
-                            Error("Token inesperado después de '#'");
-                        }
+                        Avanzar();
+                        if (token == "include" || token == "define") Directiva_proc();
+                        else { Error("Error en directiva"); Avanzar(); }
                         break;
 
                     case "LF":
                         Numero_linea++;
+                        Avanzar();
                         break;
 
                     case "int":
@@ -364,12 +358,21 @@ namespace Practica2
                         Declaracion();
                         break;
 
+                    // --- NUEVO CASO: Main sin tipo ---
+                    case "main":
+                        Error("La función 'main' debe tener un tipo de retorno (ej. int main)");
+                        Procesar_Main(); // Lo procesamos igual para no romper el resto del código
+                        break;
+                    // --------------------------------
+
                     default:
                         if (token != null && token != "Fin")
+                        {
                             Error($"Token inesperado en cabecera: '{token}'");
+                            Avanzar();
+                        }
                         break;
                 }
-                token = Leer.ReadLine();
             }
         }
 
@@ -377,329 +380,243 @@ namespace Practica2
         {
             Numero_linea = 1;
             Leer = new StreamReader(archivoback);
-            token = Leer.ReadLine();
+            Avanzar();
             Cabecera();
             Leer.Close();
         }
 
-        private int Directiva_include()
-        {
-            if (token == "<")
-            {
-                token = Leer.ReadLine();
-                if (token == "libreria")
-                {
-                    token = Leer.ReadLine();
-                    if (token == ">")
-                    {
-                        return 1;
-                    }
-                    else
-                    {
-                        Error("Falta '>' en include");
-                        return 0;
-                    }
-                }
-                else
-                {
-                    Error("Falta nombre de librería");
-                    return 0;
-                }
-            }
-            else if (token == "Cadena" || token == "cadena")
-            {
-                return 1;
-            }
-            else
-            {
-                Error("Sintaxis de include inválida");
-                return 0;
-            }
-        }
-
         private int Directiva_proc()
         {
+            // Ya leímos #, ahora leemos "include" o "define"
+            // Pero ojo: en Cabecera() ya hiciste Avanzar(), así que 'token' ya tiene "include"
+
             if (token == "include")
             {
-                token = Leer.ReadLine();
+                Avanzar();
+
+                // Caso 1: #include <stdio.h>
                 if (token == "<")
                 {
-                    token = Leer.ReadLine();
-                    if (token == "libreria")
+                    // Consumimos todo hasta el '>'
+                    // Esto permite "stdio.h", "sys/types.h", etc.
+                    do
                     {
-                        token = Leer.ReadLine();
-                        if (token == ">")
+                        Avanzar();
+                        if (token == "Fin" || token == "LF")
                         {
-                            return 1;
-                        }
-                        else
-                        {
-                            Error("Falta '>' en directiva include");
+                            Error("Falta '>' al final del include");
                             return 0;
                         }
-                    }
-                    else
-                    {
-                        Error("Falta nombre de librería entre '<' y '>'");
-                        return 0;
-                    }
+                    } while (token != ">");
+
+                    Avanzar(); // Consumimos el '>'
+                    return 1;
                 }
-                else if (token == "Cadena")
+                // Caso 2: #include "archivo.h"
+                else if (token == "Cadena") // Tu léxico devuelve "Cadena" para lo que está entre comillas
                 {
+                    Avanzar();
                     return 1;
                 }
                 else
                 {
-                    Error("Formato de include inválido");
+                    Error("Se esperaba '<libreria>' o \"archivo\" después de include");
                     return 0;
                 }
             }
             else if (token == "define")
             {
+                Avanzar();
+                // Consumimos el nombre de la constante y el valor
+                while (token != "LF" && token != "Fin") Avanzar();
                 return 1;
             }
-            else
-            {
-                Error("Se esperaba 'include' o 'define' después de '#'");
-                return 0;
-            }
+
+            return 0;
         }
 
         private void Declaracion()
         {
-            token = Leer.ReadLine();
+            Avanzar(); // Leemos el nombre (identificador) o 'main'
 
-            if (token == null)
+            if (token == null) { Error("Declaración incompleta"); return; }
+
+            // Caso A: Es main correctamente declarado (con int antes)
+            if (token == "main")
             {
-                Error("Declaración incompleta");
+                Procesar_Main();
                 return;
             }
 
+            // Caso B: Es una variable normal
             if (token == "identificador")
             {
-                token = Leer.ReadLine();
+                Avanzar(); // Leemos lo que sigue (esperamos =, ;, [ )
 
-                if (token == null)
-                {
-                    Error("Declaración incompleta después del identificador");
-                    return;
-                }
+                if (token == null) { Error("Declaración incompleta"); return; }
 
+                // Validación de asignación mal formada (ej: int a - 10;)
                 if (token == "-")
                 {
-                    Error("Falta '=' en la asignación; se encontró '-' inmediatamente después del identificador");
-                    while (token != null && token != ";" && token != "LF" && token != "Fin")
-                    {
-                        token = Leer.ReadLine();
-                    }
-                    if (token == ";") token = Leer.ReadLine();
+                    Error("Token inesperado '-'. ¿Quisiste usar '='?");
+                    while (token != ";" && token != "LF" && token != "Fin") Avanzar();
+                    if (token == ";") Avanzar();
                     return;
                 }
 
                 switch (token)
                 {
-                    case ";":
-                        token = Leer.ReadLine();
+                    case ";": // Declaración simple: int a;
+                        Avanzar();
                         return;
 
-                    case "main":
-                        do
-                        {
-                            token = Leer.ReadLine();
-                            if (token == null || token == "Fin") break;
-                        } while (token != "{");
-                        return;
-
-                    case "=":
+                    case "=": // Asignación correcta: int a = 10;
                         Dec_VGlobal();
                         return;
 
-                    case "[":
+                    case "[": // Arreglo: int a[10];
                         D_Arreglos();
-                        if (token == "{")
-                        {
-                            Error("Falta '=' antes de la inicialización del arreglo");
-                            int nivel = 1;
-                            while ((token = Leer.ReadLine()) != null && token != "Fin" && nivel > 0)
-                            {
-                                if (token == "{") nivel++;
-                                else if (token == "}") nivel--;
-                            }
-                            if (token == ";") token = Leer.ReadLine();
-                        }
                         return;
 
-                    case "(":
-                        do
-                        {
-                            token = Leer.ReadLine();
-                            if (token == null || token == "Fin") break;
-                            if (token == "{") break;
-                        } while (true);
-                        token = Leer.ReadLine();
+                    case "(": // Prototipo de función: int suma(...);
+                              // Consumir hasta el final de la declaración de función
+                        while (token != ")" && token != "Fin") Avanzar();
+                        Avanzar(); // Consumir )
+                        if (token == ";") Avanzar();
+                        else if (token == "{") { Error("No se permiten funciones anidadas aquí"); Bloque_Codigo(); }
                         return;
 
                     default:
-                        Error("Falta ';' en declaración o token inesperado después del identificador");
-                        while (token != null && token != ";" && token != "LF" && token != "Fin")
-                            token = Leer.ReadLine();
-                        if (token == ";") token = Leer.ReadLine();
+                        // --- DETECCIÓN DE FALTA DE IGUAL ---
+                        // Si encontramos un número o constante pero no había un '=', es un error de sintaxis común
+                        if (token == "numero" || token == "numero_real" || token == "caracter" || token == "identificador")
+                        {
+                            Error($"Falta el signo '=' antes de '{token}'");
+                            // Recuperación: Asumimos que hubo un igual imaginario y consumimos el valor
+                            Avanzar();
+                            if (token == ";") Avanzar();
+                        }
+                        else
+                        {
+                            Error($"Se esperaba ';' o '=', pero se encontró '{token}'");
+                            // Recuperación genérica
+                            if (token != "Fin" && token != "}") Avanzar();
+                        }
                         return;
                 }
             }
-            else if (token == "main")
-            {
-                do
-                {
-                    token = Leer.ReadLine();
-                    if (token == null || token == "Fin") break;
-                } while (token != "{");
-            }
             else
             {
-                Error("Falta identificador en declaración");
+                Error("Se esperaba un identificador después del tipo de dato");
+                // Intentar avanzar para no quedarse pegado
+                Avanzar();
             }
         }
 
+
         private void D_Arreglos()
         {
-            token = Leer.ReadLine();
-            if (token == null) { Error("Declaración de arreglo incompleta"); return; }
+            // --- PARTE 1: DIMENSIONES ---
+            // (Esta parte estaba bien, la dejo igual pero asegurando el flujo)
+            Avanzar(); // Consumimos el primer '['
 
             while (true)
             {
-                if (token != "numero")
+                if (token != "numero" && token != "identificador")
                 {
-                    Error("Se esperaba un valor de longitud de dimensión dentro de los corchetes");
+                    Error("Se esperaba tamaño del arreglo");
                     return;
                 }
+                Avanzar();
 
-                token = Leer.ReadLine();
                 if (token != "]")
                 {
-                    Error("Se esperaba ']' después del número de la dimensión");
-                    while (token != null && token != "]" && token != ";" && token != "Fin")
-                        token = Leer.ReadLine();
-                    if (token == "]") token = Leer.ReadLine();
-                    else return;
+                    Error("Falta ']'");
+                    return;
                 }
-                else
-                {
-                    token = Leer.ReadLine();
-                }
+                Avanzar(); // Consumimos ']'
 
                 if (token == "[")
                 {
-                    token = Leer.ReadLine();
+                    Avanzar();
                     continue;
                 }
                 break;
             }
 
-            if (token == "{")
-            {
-                Error("Falta '=' antes de la inicialización del arreglo");
-
-                int nivel = 1;
-                string prevToken = null;
-                while ((token = Leer.ReadLine()) != null && token != "Fin" && nivel > 0)
-                {
-                    if (token == "{")
-                    {
-                        if (prevToken == "numero" || prevToken == "identificador")
-                            Error("Falta ',' entre elementos o subarreglos");
-                        nivel++;
-                    }
-                    else if (token == "}")
-                    {
-                        nivel--;
-                    }
-                    else if (token == "numero" || token == "identificador")
-                    {
-                        if (prevToken == "numero" || prevToken == "identificador")
-                            Error("Falta ',' entre valores dentro del arreglo");
-                    }
-                    prevToken = token;
-                }
-                return;
-            }
-
+            // --- PARTE 2: INICIALIZACIÓN ---
             if (token == "=")
             {
-                string prevToken = null;
-                int nivel = 0;
-                bool dentroArreglo = false;
-
-                while ((token = Leer.ReadLine()) != null && token != "Fin")
+                Avanzar();
+                if (token != "{")
                 {
-                    if (token == "{")
-                    {
-                        if (prevToken == "numero" || prevToken == "identificador" || prevToken == "}")
-                            Error("Falta ',' entre subarreglos o elementos del arreglo");
-
-                        nivel++;
-                        dentroArreglo = true;
-                    }
-                    else if (token == "}")
-                    {
-                        nivel--;
-                        if (nivel < 0) nivel = 0;
-                        if (nivel == 0) dentroArreglo = false;
-                    }
-                    else if (token == "numero" || token == "numero_real" || token == "identificador" || token == "caracter")
-                    {
-                        if (prevToken == "numero" || prevToken == "numero_real" || prevToken == "identificador" || prevToken == "caracter")
-                            Error("Falta ',' entre valores dentro del arreglo");
-                    }
-                    else if (token == ",")
-                    {
-                        if (prevToken == null || prevToken == "," || prevToken == "{")
-                            Error("Coma inesperada en inicializador de arreglo");
-                    }
-                    else if (token == ";")
-                    {
-                        if (nivel > 0)
-                        {
-                            Error("Falta '}' antes de ';' en la inicialización del arreglo");
-                        }
-                        break;
-                    }
-
-                    prevToken = token;
-
-                    if (!dentroArreglo && token == "}")
-                        break;
-                }
-
-                if (nivel != 0)
-                {
-                    Error("Inicialización de arreglo sin '}' de cierre");
+                    Error("Se esperaba '{' para iniciar la inicialización");
                     return;
                 }
 
-                if (token != ";")
+                // Lógica para llaves anidadas {{1,2}, {3,4}}
+                int balance = 0;
+                bool primerElemento = true; // Para controlar comas
+
+                // Entramos al bucle principal de inicialización
+                // Consumimos la primera '{'
+                balance = 1;
+                Avanzar();
+
+                while (balance > 0 && token != "Fin" && token != ";")
                 {
-                    while (token != null && token != ";" && token != "Fin")
-                        token = Leer.ReadLine();
+                    if (token == "{")
+                    {
+                        // Si abrimos sub-arreglo, verificamos coma previa (salvo que sea el primero)
+                        if (!primerElemento) Error("Falta ',' entre sub-arreglos");
+                        balance++;
+                        primerElemento = true; // Reiniciamos para el contenido de adentro
+                        Avanzar();
+                    }
+                    else if (token == "}")
+                    {
+                        balance--;
+                        primerElemento = false; // Al cerrar, acabamos de terminar un elemento
+                        Avanzar();
+                    }
+                    else if (token == ",")
+                    {
+                        // La coma es válida solo si NO es el primer elemento
+                        if (primerElemento) Error("Coma inesperada al inicio de bloque");
+                        primerElemento = true; // Esperamos un elemento después de la coma
+                        Avanzar();
+                    }
+                    else if (token == "numero" || token == "identificador" || token == "numero_real" || token == "caracter")
+                    {
+                        // Si encontramos un valor y NO es el primero, faltó la coma
+                        if (!primerElemento) Error("Falta ',' entre valores");
+
+                        primerElemento = false; // Ya leímos un elemento, el siguiente debe ser coma o cierre
+                        Avanzar();
+                    }
+                    else
+                    {
+                        Error("Token inesperado en inicialización: " + token);
+                        Avanzar();
+                    }
                 }
-                token = Leer.ReadLine();
-                return;
+
+                if (balance > 0) Error("Falta '}' de cierre en la inicialización");
             }
 
+            // --- PARTE 3: PUNTO Y COMA ---
             if (token != ";")
             {
-                while (token != null && token != ";" && token != "Fin")
-                    token = Leer.ReadLine();
-                if (token != ";")
-                    Error("Falta ';' al final de la declaración del arreglo");
+                Error("Falta ';' al final del arreglo");
             }
-
-            token = Leer.ReadLine();
+            else
+            {
+                Avanzar();
+            }
         }
 
         private int Constante()
         {
-            token = Leer.ReadLine();
             switch (token)
             {
                 case "-":
@@ -716,7 +633,8 @@ namespace Practica2
 
         private void Dec_VGlobal()
         {
-            token = Leer.ReadLine();
+            Avanzar();
+
             if (token == null)
             {
                 Error("Inicialización incompleta después de '='");
@@ -728,11 +646,13 @@ namespace Practica2
                 int ok = Constante();
                 if (ok == 1)
                 {
-                    token = Leer.ReadLine();
-                    while (token == "LF") token = Leer.ReadLine();
+                    Avanzar();
+
+                    while (token == "LF") Avanzar();
+
                     if (token == ";")
                     {
-                        token = Leer.ReadLine();
+                        Avanzar();
                     }
                     else
                     {
@@ -750,14 +670,278 @@ namespace Practica2
             }
             else if (token == ";")
             {
-                token = Leer.ReadLine();
+                Avanzar();
             }
             else
             {
                 Error("Token inesperado en inicialización global: " + token);
+
                 while (token != null && token != ";" && token != "Fin")
                     token = Leer.ReadLine();
-                if (token == ";") token = Leer.ReadLine();
+
+                if (token == ";") Avanzar();
+            }
+        }
+
+        private void Avanzar()
+        {
+            do
+            {
+                token = Leer.ReadLine();
+                if (token == "LF") Numero_linea++;
+            } while (token == "LF");
+        }
+
+        private void Bloque_Codigo()
+        {
+            Avanzar(); // Consumimos la llave de apertura '{'
+
+            while (token != "}" && token != "Fin" && token != null)
+            {
+                switch (token)
+                {
+                    case "int":
+                    case "float":
+                    case "double":
+                    case "char":
+                    case "bool":
+                        Declaracion();
+                        break;
+                    case "if": Estructura_If(); break;
+                    case "while": Estructura_While(); break;
+                    case "for": Estructura_For(); break;
+                    case "switch": Estructura_Switch(); break;
+
+                    // --- ESTA ES LA PARTE CLAVE PARA TU ERROR ---
+                    case "else":
+                        Error("Error de sintaxis: Se encontró un 'else' inesperado. Posiblemente falta una llave de cierre '}' en el bloque anterior.");
+                        // TRUCO: No avanzamos. Hacemos 'return' para salir de este bloque (el del if)
+                        // y permitir que la función 'Estructura_If' capture este 'else' y lo procese.
+                        return;
+                    // -------------------------------------------
+
+                    case "identificador":
+                        while (token != ";" && token != "Fin") Avanzar();
+                        Avanzar();
+                        break;
+
+                    case "LF":
+                        Avanzar();
+                        break;
+
+                    default:
+                        Avanzar();
+                        break;
+                }
+            }
+
+            if (token == "}")
+            {
+                Avanzar();
+            }
+            else if (token == "Fin")
+            {
+                Error("Falta la llave de cierre '}' al final del bloque");
+            }
+        }
+
+        private void Estructura_If()
+        {
+            Avanzar();
+            if (token != "(") Error("Se esperaba '(' después de 'if'");
+
+            Validar_Expresion_Parentesis();
+
+            // Verificación de llave obligatoria
+            if (token == "{")
+            {
+                Bloque_Codigo(); // Entra aquí. Si falta la }, Bloque_Codigo regresa al encontrar el 'else'
+            }
+            else
+            {
+                Error("Se esperaba '{' después de la condición del if");
+                // Recuperación rápida
+                while (token != ";" && token != "Fin") Avanzar();
+                if (token == ";") Avanzar();
+            }
+
+            // Aquí capturamos el 'else', incluso si Bloque_Codigo falló
+            if (token == "else")
+            {
+                Avanzar();
+                if (token == "{")
+                {
+                    Bloque_Codigo();
+                }
+                else if (token == "if")
+                {
+                    Estructura_If();
+                }
+                else
+                {
+                    Error("Se esperaba '{' o 'if' después de 'else'");
+                }
+            }
+        }
+        private void Estructura_While()
+        {
+            // Estructura: while (condicion) { bloque }
+            Avanzar();
+            if (token != "(") Error("Se esperaba '(' después de 'while'");
+
+            Validar_Expresion_Parentesis();
+
+            if (token != "{") Error("Se esperaba '{' después de la condición del while");
+
+            Bloque_Codigo();
+        }
+        private void Estructura_For()
+        {
+            // Estructura: for (init; cond; inc) { bloque }
+            Avanzar();
+            if (token != "(") Error("Se esperaba '(' después de 'for'");
+            Avanzar();
+
+            // 1. Inicialización (simple check hasta el ;)
+            while (token != ";" && token != "Fin") Avanzar();
+            if (token != ";") Error("Falta ';' en la inicialización del for");
+            Avanzar();
+
+            // 2. Condición
+            while (token != ";" && token != "Fin") Avanzar();
+            if (token != ";") Error("Falta ';' en la condición del for");
+            Avanzar();
+
+            // 3. Incremento (hasta el parentesis de cierre)
+            while (token != ")" && token != "Fin") Avanzar();
+
+            if (token != ")") Error("Se esperaba ')' al finalizar el for");
+            Avanzar();
+
+            if (token != "{") Error("Se esperaba '{' después de los parámetros del for");
+
+            Bloque_Codigo();
+        }
+        private void Estructura_Switch()
+        {
+            Avanzar();
+            if (token != "(") Error("Se esperaba '(' después de 'switch'");
+            Validar_Expresion_Parentesis();
+
+            if (token != "{") Error("Se esperaba '{' para abrir el switch");
+            Avanzar();
+
+            // Analizar casos dentro del switch
+            while (token != "}" && token != "Fin")
+            {
+                if (token == "case")
+                {
+                    Avanzar();
+                    // Esperamos un valor (numero o caracter)
+                    if (token == "numero" || token == "caracter" || token == "identificador")
+                        Avanzar();
+                    else
+                        Error("Se esperaba un valor constante para el 'case'");
+
+                    if (token != ":") Error("Se esperaba ':' después del valor del case");
+                    Avanzar();
+
+                    // Leemos instrucciones hasta encontrar break, otro case, default o cierre }
+                    // Para simplificar, usamos un bucle interno simple
+                    while (token != "break" && token != "case" && token != "default" && token != "}" && token != "Fin")
+                    {
+                        // Si hay lógica compleja aquí, se llamaría a funciones de sentencia
+                        // Por ahora solo avanzamos
+                        Avanzar();
+                        if (token == ";") Avanzar();
+                    }
+
+                    if (token == "break")
+                    {
+                        Avanzar();
+                        if (token == ";") Avanzar();
+                        else Error("Falta ';' después del break");
+                    }
+                }
+                else if (token == "default")
+                {
+                    Avanzar();
+                    if (token != ":") Error("Se esperaba ':' después de default");
+                    Avanzar();
+                    // Consumir hasta el cierre
+                    while (token != "}" && token != "break" && token != "Fin") Avanzar();
+                    if (token == "break")
+                    {
+                        Avanzar();
+                        if (token == ";") Avanzar();
+                    }
+                }
+                else if (token == "LF")
+                {
+                    Avanzar();
+                }
+                else
+                {
+                    // Token inesperado dentro de switch
+                    Avanzar();
+                }
+            }
+
+            if (token == "}") Avanzar();
+        }
+        private void Validar_Expresion_Parentesis()
+        {
+            int balance = 1; // Ya leímos el primer '('
+            Avanzar();
+
+            while (balance > 0 && token != "Fin")
+            {
+                if (token == "(") balance++;
+                else if (token == ")") balance--;
+
+                if (balance > 0) Avanzar();
+            }
+
+            if (balance == 0) Avanzar(); // Salimos del paréntesis de cierre
+            else Error("Paréntesis no balanceados en la expresión");
+        }
+
+        private void Procesar_Main()
+        {
+            // 1. Paréntesis de apertura
+            Avanzar();
+            if (token != "(")
+            {
+                Error("Falta '(' después de main");
+            }
+            else
+            {
+                Avanzar();
+            }
+
+            // 2. Paréntesis de cierre
+            if (token != ")")
+            {
+                Error("Falta ')' en main");
+                // Recuperación: saltamos hasta encontrar ')' o '{'
+                while (token != ")" && token != "{" && token != "Fin") Avanzar();
+                if (token == ")") Avanzar();
+            }
+            else
+            {
+                Avanzar();
+            }
+
+            // 3. Llave de apertura
+            if (token == "{")
+            {
+                Bloque_Codigo();
+            }
+            else
+            {
+                Error("Falta '{' para iniciar el cuerpo del main");
+                // AQUÍ ESTÁ EL TRUCO: Si falta la llave, NO entramos al bloque
+                // para evitar interpretar el resto del código mal.
             }
         }
     }
