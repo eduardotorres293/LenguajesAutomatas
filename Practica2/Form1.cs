@@ -358,12 +358,10 @@ namespace Practica2
                         Declaracion();
                         break;
 
-                    // --- NUEVO CASO: Main sin tipo ---
                     case "main":
                         Error("La función 'main' debe tener un tipo de retorno (ej. int main)");
-                        Procesar_Main(); // Lo procesamos igual para no romper el resto del código
+                        Procesar_Main();
                         break;
-                    // --------------------------------
 
                     default:
                         if (token != null && token != "Fin")
@@ -387,18 +385,12 @@ namespace Practica2
 
         private int Directiva_proc()
         {
-            // Ya leímos #, ahora leemos "include" o "define"
-            // Pero ojo: en Cabecera() ya hiciste Avanzar(), así que 'token' ya tiene "include"
-
             if (token == "include")
             {
                 Avanzar();
 
-                // Caso 1: #include <stdio.h>
                 if (token == "<")
                 {
-                    // Consumimos todo hasta el '>'
-                    // Esto permite "stdio.h", "sys/types.h", etc.
                     do
                     {
                         Avanzar();
@@ -409,11 +401,10 @@ namespace Practica2
                         }
                     } while (token != ">");
 
-                    Avanzar(); // Consumimos el '>'
+                    Avanzar();
                     return 1;
                 }
-                // Caso 2: #include "archivo.h"
-                else if (token == "Cadena") // Tu léxico devuelve "Cadena" para lo que está entre comillas
+                else if (token == "Cadena")
                 {
                     Avanzar();
                     return 1;
@@ -427,7 +418,6 @@ namespace Practica2
             else if (token == "define")
             {
                 Avanzar();
-                // Consumimos el nombre de la constante y el valor
                 while (token != "LF" && token != "Fin") Avanzar();
                 return 1;
             }
@@ -437,25 +427,22 @@ namespace Practica2
 
         private void Declaracion()
         {
-            Avanzar(); // Leemos el nombre (identificador) o 'main'
+            Avanzar();
 
             if (token == null) { Error("Declaración incompleta"); return; }
 
-            // Caso A: Es main correctamente declarado (con int antes)
             if (token == "main")
             {
                 Procesar_Main();
                 return;
             }
 
-            // Caso B: Es una variable normal
             if (token == "identificador")
             {
-                Avanzar(); // Leemos lo que sigue (esperamos =, ;, [ )
+                Avanzar();
 
                 if (token == null) { Error("Declaración incompleta"); return; }
 
-                // Validación de asignación mal formada (ej: int a - 10;)
                 if (token == "-")
                 {
                     Error("Token inesperado '-'. ¿Quisiste usar '='?");
@@ -466,40 +453,35 @@ namespace Practica2
 
                 switch (token)
                 {
-                    case ";": // Declaración simple: int a;
+                    case ";":
                         Avanzar();
                         return;
 
-                    case "=": // Asignación correcta: int a = 10;
+                    case "=":
                         Dec_VGlobal();
                         return;
 
-                    case "[": // Arreglo: int a[10];
+                    case "[":
                         D_Arreglos();
                         return;
 
-                    case "(": // Prototipo de función: int suma(...);
-                              // Consumir hasta el final de la declaración de función
+                    case "(":
                         while (token != ")" && token != "Fin") Avanzar();
-                        Avanzar(); // Consumir )
+                        Avanzar();
                         if (token == ";") Avanzar();
                         else if (token == "{") { Error("No se permiten funciones anidadas aquí"); Bloque_Codigo(); }
                         return;
 
                     default:
-                        // --- DETECCIÓN DE FALTA DE IGUAL ---
-                        // Si encontramos un número o constante pero no había un '=', es un error de sintaxis común
                         if (token == "numero" || token == "numero_real" || token == "caracter" || token == "identificador")
                         {
                             Error($"Falta el signo '=' antes de '{token}'");
-                            // Recuperación: Asumimos que hubo un igual imaginario y consumimos el valor
                             Avanzar();
                             if (token == ";") Avanzar();
                         }
                         else
                         {
                             Error($"Se esperaba ';' o '=', pero se encontró '{token}'");
-                            // Recuperación genérica
                             if (token != "Fin" && token != "}") Avanzar();
                         }
                         return;
@@ -508,7 +490,6 @@ namespace Practica2
             else
             {
                 Error("Se esperaba un identificador después del tipo de dato");
-                // Intentar avanzar para no quedarse pegado
                 Avanzar();
             }
         }
@@ -516,9 +497,7 @@ namespace Practica2
 
         private void D_Arreglos()
         {
-            // --- PARTE 1: DIMENSIONES ---
-            // (Esta parte estaba bien, la dejo igual pero asegurando el flujo)
-            Avanzar(); // Consumimos el primer '['
+            Avanzar();
 
             while (true)
             {
@@ -534,7 +513,7 @@ namespace Practica2
                     Error("Falta ']'");
                     return;
                 }
-                Avanzar(); // Consumimos ']'
+                Avanzar();
 
                 if (token == "[")
                 {
@@ -544,7 +523,6 @@ namespace Practica2
                 break;
             }
 
-            // --- PARTE 2: INICIALIZACIÓN ---
             if (token == "=")
             {
                 Avanzar();
@@ -554,12 +532,9 @@ namespace Practica2
                     return;
                 }
 
-                // Lógica para llaves anidadas {{1,2}, {3,4}}
                 int balance = 0;
-                bool primerElemento = true; // Para controlar comas
+                bool primerElemento = true;
 
-                // Entramos al bucle principal de inicialización
-                // Consumimos la primera '{'
                 balance = 1;
                 Avanzar();
 
@@ -567,31 +542,28 @@ namespace Practica2
                 {
                     if (token == "{")
                     {
-                        // Si abrimos sub-arreglo, verificamos coma previa (salvo que sea el primero)
                         if (!primerElemento) Error("Falta ',' entre sub-arreglos");
                         balance++;
-                        primerElemento = true; // Reiniciamos para el contenido de adentro
+                        primerElemento = true;
                         Avanzar();
                     }
                     else if (token == "}")
                     {
                         balance--;
-                        primerElemento = false; // Al cerrar, acabamos de terminar un elemento
+                        primerElemento = false;
                         Avanzar();
                     }
                     else if (token == ",")
                     {
-                        // La coma es válida solo si NO es el primer elemento
                         if (primerElemento) Error("Coma inesperada al inicio de bloque");
-                        primerElemento = true; // Esperamos un elemento después de la coma
+                        primerElemento = true;
                         Avanzar();
                     }
                     else if (token == "numero" || token == "identificador" || token == "numero_real" || token == "caracter")
                     {
-                        // Si encontramos un valor y NO es el primero, faltó la coma
                         if (!primerElemento) Error("Falta ',' entre valores");
 
-                        primerElemento = false; // Ya leímos un elemento, el siguiente debe ser coma o cierre
+                        primerElemento = false;
                         Avanzar();
                     }
                     else
@@ -604,7 +576,6 @@ namespace Practica2
                 if (balance > 0) Error("Falta '}' de cierre en la inicialización");
             }
 
-            // --- PARTE 3: PUNTO Y COMA ---
             if (token != ";")
             {
                 Error("Falta ';' al final del arreglo");
@@ -694,7 +665,7 @@ namespace Practica2
 
         private void Bloque_Codigo()
         {
-            Avanzar(); // Consumimos la llave de apertura '{'
+            Avanzar();
 
             while (token != "}" && token != "Fin" && token != null)
             {
@@ -712,13 +683,9 @@ namespace Practica2
                     case "for": Estructura_For(); break;
                     case "switch": Estructura_Switch(); break;
 
-                    // --- ESTA ES LA PARTE CLAVE PARA TU ERROR ---
                     case "else":
                         Error("Error de sintaxis: Se encontró un 'else' inesperado. Posiblemente falta una llave de cierre '}' en el bloque anterior.");
-                        // TRUCO: No avanzamos. Hacemos 'return' para salir de este bloque (el del if)
-                        // y permitir que la función 'Estructura_If' capture este 'else' y lo procese.
                         return;
-                    // -------------------------------------------
 
                     case "identificador":
                         while (token != ";" && token != "Fin") Avanzar();
@@ -752,20 +719,17 @@ namespace Practica2
 
             Validar_Expresion_Parentesis();
 
-            // Verificación de llave obligatoria
             if (token == "{")
             {
-                Bloque_Codigo(); // Entra aquí. Si falta la }, Bloque_Codigo regresa al encontrar el 'else'
+                Bloque_Codigo();
             }
             else
             {
                 Error("Se esperaba '{' después de la condición del if");
-                // Recuperación rápida
                 while (token != ";" && token != "Fin") Avanzar();
                 if (token == ";") Avanzar();
             }
 
-            // Aquí capturamos el 'else', incluso si Bloque_Codigo falló
             if (token == "else")
             {
                 Avanzar();
@@ -785,7 +749,6 @@ namespace Practica2
         }
         private void Estructura_While()
         {
-            // Estructura: while (condicion) { bloque }
             Avanzar();
             if (token != "(") Error("Se esperaba '(' después de 'while'");
 
@@ -797,22 +760,18 @@ namespace Practica2
         }
         private void Estructura_For()
         {
-            // Estructura: for (init; cond; inc) { bloque }
             Avanzar();
             if (token != "(") Error("Se esperaba '(' después de 'for'");
             Avanzar();
 
-            // 1. Inicialización (simple check hasta el ;)
             while (token != ";" && token != "Fin") Avanzar();
             if (token != ";") Error("Falta ';' en la inicialización del for");
             Avanzar();
 
-            // 2. Condición
             while (token != ";" && token != "Fin") Avanzar();
             if (token != ";") Error("Falta ';' en la condición del for");
             Avanzar();
 
-            // 3. Incremento (hasta el parentesis de cierre)
             while (token != ")" && token != "Fin") Avanzar();
 
             if (token != ")") Error("Se esperaba ')' al finalizar el for");
@@ -831,13 +790,11 @@ namespace Practica2
             if (token != "{") Error("Se esperaba '{' para abrir el switch");
             Avanzar();
 
-            // Analizar casos dentro del switch
             while (token != "}" && token != "Fin")
             {
                 if (token == "case")
                 {
                     Avanzar();
-                    // Esperamos un valor (numero o caracter)
                     if (token == "numero" || token == "caracter" || token == "identificador")
                         Avanzar();
                     else
@@ -846,12 +803,8 @@ namespace Practica2
                     if (token != ":") Error("Se esperaba ':' después del valor del case");
                     Avanzar();
 
-                    // Leemos instrucciones hasta encontrar break, otro case, default o cierre }
-                    // Para simplificar, usamos un bucle interno simple
                     while (token != "break" && token != "case" && token != "default" && token != "}" && token != "Fin")
                     {
-                        // Si hay lógica compleja aquí, se llamaría a funciones de sentencia
-                        // Por ahora solo avanzamos
                         Avanzar();
                         if (token == ";") Avanzar();
                     }
@@ -868,7 +821,6 @@ namespace Practica2
                     Avanzar();
                     if (token != ":") Error("Se esperaba ':' después de default");
                     Avanzar();
-                    // Consumir hasta el cierre
                     while (token != "}" && token != "break" && token != "Fin") Avanzar();
                     if (token == "break")
                     {
@@ -882,7 +834,6 @@ namespace Practica2
                 }
                 else
                 {
-                    // Token inesperado dentro de switch
                     Avanzar();
                 }
             }
@@ -891,7 +842,7 @@ namespace Practica2
         }
         private void Validar_Expresion_Parentesis()
         {
-            int balance = 1; // Ya leímos el primer '('
+            int balance = 1;
             Avanzar();
 
             while (balance > 0 && token != "Fin")
@@ -902,13 +853,12 @@ namespace Practica2
                 if (balance > 0) Avanzar();
             }
 
-            if (balance == 0) Avanzar(); // Salimos del paréntesis de cierre
+            if (balance == 0) Avanzar();
             else Error("Paréntesis no balanceados en la expresión");
         }
 
         private void Procesar_Main()
         {
-            // 1. Paréntesis de apertura
             Avanzar();
             if (token != "(")
             {
@@ -919,11 +869,9 @@ namespace Practica2
                 Avanzar();
             }
 
-            // 2. Paréntesis de cierre
             if (token != ")")
             {
                 Error("Falta ')' en main");
-                // Recuperación: saltamos hasta encontrar ')' o '{'
                 while (token != ")" && token != "{" && token != "Fin") Avanzar();
                 if (token == ")") Avanzar();
             }
@@ -932,7 +880,6 @@ namespace Practica2
                 Avanzar();
             }
 
-            // 3. Llave de apertura
             if (token == "{")
             {
                 Bloque_Codigo();
@@ -940,8 +887,6 @@ namespace Practica2
             else
             {
                 Error("Falta '{' para iniciar el cuerpo del main");
-                // AQUÍ ESTÁ EL TRUCO: Si falta la llave, NO entramos al bloque
-                // para evitar interpretar el resto del código mal.
             }
         }
     }
