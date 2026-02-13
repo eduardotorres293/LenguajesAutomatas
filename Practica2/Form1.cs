@@ -466,10 +466,7 @@ namespace Practica2
                         return;
 
                     case "(":
-                        while (token != ")" && token != "Fin") Avanzar();
-                        Avanzar();
-                        if (token == ";") Avanzar();
-                        else if (token == "{") { Error("No se permiten funciones anidadas aquí"); Bloque_Codigo(); }
+                        Definicion_Funcion();
                         return;
 
                     default:
@@ -887,6 +884,62 @@ namespace Practica2
             else
             {
                 Error("Falta '{' para iniciar el cuerpo del main");
+            }
+        }
+        private void Definicion_Funcion()
+        {
+            Avanzar();
+
+            if (token == ")")
+            {
+                Avanzar();
+            }
+            else
+            {
+                while (true)
+                {
+                    if (token != "int" && token != "float" && token != "double" &&
+                        token != "char" && token != "void")
+                    {
+                        Error("Se esperaba un tipo de dato en los parámetros");
+                        return;
+                    }
+
+                    Avanzar();
+
+                    if (token != "identificador")
+                    {
+                        Error("Se esperaba un identificador como nombre del parámetro");
+                        return;
+                    }
+
+                    Avanzar();
+
+                    if (token == ",")
+                    {
+                        Avanzar();
+                        continue;
+                    }
+                    else if (token == ")")
+                    {
+                        Avanzar();
+                        break;
+                    }
+                    else
+                    {
+                        Error("Se esperaba ',' o ')'");
+                        return;
+                    }
+                }
+            }
+
+            if (token == "{")
+            {
+                Bloque_Codigo();
+            }
+            else
+            {
+                Error("Se esperaba '{' para iniciar el cuerpo de la función");
             }
         }
     }
