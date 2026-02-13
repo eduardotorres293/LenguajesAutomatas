@@ -181,20 +181,17 @@ namespace Practica2
             richTextBox2.AppendText($"Error: se esperaba '{esperado}', pero se encontró '{tokenLocal}', línea {Numero_linea}\n");
             N_error++;
         }
-
         private void Archivo_Libreria()
         {
             i_caracter = Leer.Read();
             if ((char)i_caracter == 'h') { Escribir.Write("libreria\n"); i_caracter = Leer.Read(); }
             else { Error(i_caracter); }
         }
-
         private bool Palabra_Reservada()
         {
             if (P_Reservadas.IndexOf(elemento.ToLower()) >= 0) return true;
             return false;
         }
-
         private void Identificador()
         {
             do
@@ -210,7 +207,6 @@ namespace Practica2
                 else Escribir.Write("identificador\n");
             }
         }
-
         private void Numero_Real()
         {
             do
@@ -219,7 +215,6 @@ namespace Practica2
             } while (Tipo_caracter(i_caracter) == 'd');
             Escribir.Write("numero_real\n");
         }
-
         private void Numero()
         {
             do
@@ -232,12 +227,10 @@ namespace Practica2
                 Escribir.Write("numero\n");
             }
         }
-
         private void richTextBox1_TextChanged(object sender, EventArgs e)
         {
             analizarToolStripMenuItem.Enabled = true;
         }
-
         private bool Comentario()
         {
             i_caracter = Leer.Read();
@@ -271,7 +264,6 @@ namespace Practica2
                 default: return false;
             }
         }
-
         private void analizarToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBox2.Text = "";
@@ -373,7 +365,6 @@ namespace Practica2
                 }
             }
         }
-
         private void AnalizadorSintactico()
         {
             Numero_linea = 1;
@@ -382,7 +373,6 @@ namespace Practica2
             Cabecera();
             Leer.Close();
         }
-
         private int Directiva_proc()
         {
             if (token == "include")
@@ -424,7 +414,6 @@ namespace Practica2
 
             return 0;
         }
-
         private void Declaracion()
         {
             Avanzar();
@@ -490,8 +479,6 @@ namespace Practica2
                 Avanzar();
             }
         }
-
-
         private void D_Arreglos()
         {
             Avanzar();
@@ -659,7 +646,6 @@ namespace Practica2
                 if (token == "LF") Numero_linea++;
             } while (token == "LF");
         }
-
         private void Bloque_Codigo()
         {
             Avanzar();
@@ -684,9 +670,43 @@ namespace Practica2
                         Error("Error de sintaxis: Se encontró un 'else' inesperado. Posiblemente falta una llave de cierre '}' en el bloque anterior.");
                         return;
 
-                    case "identificador":
-                        while (token != ";" && token != "Fin") Avanzar();
+                    case "return":
                         Avanzar();
+
+                        // Consumir todo lo que forme parte de la expresión del return
+                        while (token != ";" && token != "Fin")
+                            Avanzar();
+
+                        if (token == ";") Avanzar();
+                        break;
+
+                    case "identificador":
+                        Avanzar();
+
+                        if (token == ";")
+                        {
+                            Error("Falta el tipo de dato en la declaración de variable");
+                            Avanzar();
+                            break;
+                        }
+
+                        // Validar expresión en asignaciones u operaciones
+                        string anterior = "";
+
+                        while (token != ";" && token != "Fin")
+                        {
+                            // Si hay dos operandos seguidos, falta operador
+                            if ((anterior == "identificador" || anterior == "numero" || anterior == "numero_real") &&
+                                (token == "identificador" || token == "numero" || token == "numero_real"))
+                            {
+                                Error("Falta operador entre valores en la expresión");
+                            }
+
+                            anterior = token;
+                            Avanzar();
+                        }
+
+                        if (token == ";") Avanzar();
                         break;
 
                     case "LF":
@@ -708,7 +728,6 @@ namespace Practica2
                 Error("Falta la llave de cierre '}' al final del bloque");
             }
         }
-
         private void Estructura_If()
         {
             Avanzar();
@@ -840,20 +859,41 @@ namespace Practica2
         private void Validar_Expresion_Parentesis()
         {
             int balance = 1;
+            string anterior = "";
+
             Avanzar();
 
             while (balance > 0 && token != "Fin")
             {
-                if (token == "(") balance++;
-                else if (token == ")") balance--;
+                if (token == "(")
+                {
+                    balance++;
+                }
+                else if (token == ")")
+                {
+                    balance--;
+                }
+                else
+                {
+                    // Detectar dos valores seguidos sin operador
+                    if ((anterior == "identificador" || anterior == "numero" || anterior == "numero_real") &&
+                        (token == "identificador" || token == "numero" || token == "numero_real"))
+                    {
+                        Error("Falta operador en la expresión del if");
+                    }
+                }
 
-                if (balance > 0) Avanzar();
+                anterior = token;
+
+                if (balance > 0)
+                    Avanzar();
             }
 
-            if (balance == 0) Avanzar();
-            else Error("Paréntesis no balanceados en la expresión");
+            if (balance == 0)
+                Avanzar();
+            else
+                Error("Paréntesis no balanceados en la expresión");
         }
-
         private void Procesar_Main()
         {
             Avanzar();
