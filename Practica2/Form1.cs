@@ -12,7 +12,6 @@ namespace Practica2
             InitializeComponent();
             analizarToolStripMenuItem.Enabled = false;
         }
-
         private List<string> P_Reservadas = new List<string>()
         {
             "auto", "break", "case", "char", "const", "continue", "default", "do",
@@ -23,7 +22,6 @@ namespace Practica2
             "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary", "_Noreturn",
             "_Static_assert", "_Thread_local"
         };
-
         private void abrirToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog VentanaAbrir = new OpenFileDialog();
@@ -39,7 +37,6 @@ namespace Practica2
             this.Text = "Mi Compilador - " + archivo;
             analizarToolStripMenuItem.Enabled = true;
         }
-
         private void guardar()
         {
             SaveFileDialog VentanaGuardar = new SaveFileDialog();
@@ -64,18 +61,15 @@ namespace Practica2
             }
             this.Text = "Mi Compilador - " + archivo;
         }
-
         private void guardarToolStripMenuItem_Click(object sender, EventArgs e)
         {
             guardar();
         }
-
         private void nuevoToolStripMenuItem_Click(object sender, EventArgs e)
         {
             richTextBox1.Clear();
             archivo = null;
         }
-
         private void guardarComoToolStripMenuItem_Click(object sender, EventArgs e)
         {
             SaveFileDialog VentanaGuardar = new SaveFileDialog();
@@ -90,7 +84,6 @@ namespace Practica2
             }
             this.Text = "Mi Compilador - " + archivo;
         }
-
         private void salirToolStripMenuItem_Click(object sender, EventArgs e)
         {
             DialogResult Salir = MessageBox.Show(
@@ -103,7 +96,6 @@ namespace Practica2
                 Application.Exit();
             }
         }
-
         private char Tipo_caracter(int caracter)
         {
             if ((caracter >= 65 && caracter <= 90) || (caracter >= 97 && caracter <= 122)) return 'l';
@@ -121,7 +113,6 @@ namespace Practica2
                 }
             }
         }
-
         private void Simbolo()
         {
             char ch = (char)i_caracter;
@@ -143,7 +134,6 @@ namespace Practica2
                 Error($"Símbolo inesperado '{ch}'");
             }
         }
-
         private void Cadena()
         {
             do
@@ -154,7 +144,6 @@ namespace Practica2
             } while (i_caracter != 34 && i_caracter != -1);
             if (i_caracter == -1) Error(-1);
         }
-
         private void Caracter()
         {
             i_caracter = Leer.Read();
@@ -162,20 +151,17 @@ namespace Practica2
             i_caracter = Leer.Read();
             if (i_caracter != 39) Error(39);
         }
-
         private void Error(int i_caracter)
         {
             richTextBox2.AppendText("Error léxico " + (char)i_caracter + ", línea " + Numero_linea + "\n");
             N_error++;
             i_caracter = Leer.Read();
         }
-
         private void Error(string mensaje)
         {
             richTextBox2.AppendText("Error: " + mensaje + ", línea " + Numero_linea + "\n");
             N_error++;
         }
-
         private void Error(string tokenLocal, string esperado)
         {
             richTextBox2.AppendText($"Error: se esperaba '{esperado}', pero se encontró '{tokenLocal}', línea {Numero_linea}\n");
@@ -569,7 +555,6 @@ namespace Practica2
                 Avanzar();
             }
         }
-
         private int Constante()
         {
             switch (token)
@@ -585,7 +570,6 @@ namespace Practica2
                 default: return 0;
             }
         }
-
         private void Dec_VGlobal()
         {
             Avanzar();
@@ -637,7 +621,6 @@ namespace Practica2
                 if (token == ";") Avanzar();
             }
         }
-
         private void Avanzar()
         {
             do
@@ -673,7 +656,6 @@ namespace Practica2
                     case "return":
                         Avanzar();
 
-                        // Consumir todo lo que forme parte de la expresión del return
                         while (token != ";" && token != "Fin")
                             Avanzar();
 
@@ -690,12 +672,10 @@ namespace Practica2
                             break;
                         }
 
-                        // Validar expresión en asignaciones u operaciones
                         string anterior = "";
 
                         while (token != ";" && token != "Fin")
                         {
-                            // Si hay dos operandos seguidos, falta operador
                             if ((anterior == "identificador" || anterior == "numero" || anterior == "numero_real") &&
                                 (token == "identificador" || token == "numero" || token == "numero_real"))
                             {
