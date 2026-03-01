@@ -402,6 +402,7 @@ namespace Practica2
         }
         private void Declaracion()
         {
+            tipoActual = token;
             Avanzar();
 
             if (token == null) { Error("Declaración incompleta"); return; }
@@ -414,6 +415,20 @@ namespace Practica2
 
             if (token == "identificador")
             {
+                string nombreVar = token;
+
+                if (tablaVariables.ContainsKey(nombreVar))
+                {
+                    Error("Variable ya declarada: " + nombreVar);
+                }
+                else
+                {
+                    tablaVariables.Add(nombreVar,
+                        new SimboloVariable(nombreVar, tipoActual, direccionActual));
+
+                    direccionActual += 4;
+                }
+
                 Avanzar();
 
                 if (token == null) { Error("Declaración incompleta"); return; }
@@ -906,6 +921,7 @@ namespace Practica2
                 Error("Falta '{' para iniciar el cuerpo del main");
             }
         }
+
         private void Definicion_Funcion()
         {
             Avanzar();
@@ -929,6 +945,7 @@ namespace Practica2
 
                     if (token != "identificador")
                     {
+                        tablaFunciones[nombreFuncionActual].TiposParametros.Add(tipoParametro);
                         Error("Se esperaba un identificador como nombre del parámetro");
                         return;
                     }
@@ -962,5 +979,46 @@ namespace Practica2
                 Error("Se esperaba '{' para iniciar el cuerpo de la función");
             }
         }
+
+        /****
+         * Voy a empezar a hacer esto xd
+         * BLOQUES DE CODIGOS AÑADIDOS EN LA PRACTICA 2, LENGUAJES Y AUTOMATAS 2
+         */
+
+        // Clase para guardar las tablas de elementos para variables
+        class SimboloVariable
+        {
+            public string Nombre;
+            public string Tipo;
+            public int Direccion;
+
+            public SimboloVariable(string nombre, string tipo, int direccion)
+            {
+                Nombre = nombre;
+                Tipo = tipo;
+                Direccion = direccion;
+            }
+        }
+
+        // Clase para guardar las tablas de elementos para funciones
+        class SimboloFuncion
+        {
+            public string Nombre;
+            public string TipoRetorno;
+            public List<string> TiposParametros = new List<string>();
+
+            public SimboloFuncion(string nombre, string tipo)
+            {
+                Nombre = nombre;
+                TipoRetorno = tipo;
+            }
+        }
+
+        Dictionary<string, SimboloVariable> tablaVariables = new Dictionary<string, SimboloVariable>();
+        Dictionary<string, SimboloFuncion> tablaFunciones = new Dictionary<string, SimboloFuncion>();
+
+        int direccionActual = 1000;
+        string tipoActual = "";
+        string nombreFuncionActual = "";
     }
 }
