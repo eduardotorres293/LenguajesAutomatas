@@ -11,6 +11,7 @@ namespace Practica2
         public Form1()
         {
             InitializeComponent();
+            EntrarAmbito();
             TablaFunciones.Add(new SimboloFuncion("printf", "int"));
             analizarToolStripMenuItem.Enabled = false;
         }
@@ -64,7 +65,7 @@ namespace Practica2
 
         private void SalirAmbito()
         {
-            if (PilaAmbitos.Count > 0)
+            if (PilaAmbitos.Count > 1)
                 PilaAmbitos.Pop();
         }
 
@@ -86,9 +87,6 @@ namespace Practica2
 
         private void AgregarVariable(string nombre)
         {
-            if (PilaAmbitos.Count == 0)
-                EntrarAmbito();
-
             PilaAmbitos.Peek().Add(
                 new SimboloVariable(nombre, tipoActual, direccionActual)
             );
@@ -256,9 +254,18 @@ namespace Practica2
         {
             Numero_linea = 1;
             Leer = new StreamReader(archivoback);
-            Avanzar();
+
+            // 🔥 LIMPIAR ESTADO ANTERIOR
+            TablaFunciones.Clear();
             PilaAmbitos.Clear();
-            EntrarAmbito();
+            direccionActual = 0;
+
+            // volver a registrar funciones nativas
+            TablaFunciones.Add(new SimboloFuncion("printf", "int"));
+
+            EntrarAmbito(); // ámbito global limpio
+
+            Avanzar();
             Cabecera();
             Leer.Close();
         }
@@ -550,20 +557,24 @@ namespace Practica2
         private void Avanzar()
         {
             token = Leer.ReadLine();
+            if (token != null) token = token.Trim();
+
             if (token == "LF")
             {
                 Numero_linea++;
                 Avanzar();
+                return;
             }
 
             if (token == "identificador")
             {
                 valorToken = Leer.ReadLine();
+                if (valorToken != null) valorToken = valorToken.Trim();
             }
         }
-        private void Bloque_Codigo()
+        private void Bloque_Codigo(bool crearAmbito = true)
         {
-            EntrarAmbito();
+            if (crearAmbito) EntrarAmbito();
             Avanzar();
 
             while (token != "}" && token != "Fin" && token != null)
@@ -618,9 +629,34 @@ namespace Practica2
 
                         if (token == "=")
                         {
-                            // Esto es una asignación, no hace falta checar como variable (ya se declaró arriba)
-                            while (token != ";" && token != "Fin") Avanzar();
-                            if (token == ";") Avanzar();
+                            // Validar que la variable exista antes de asignar
+                            if (!VariableDeclarada(nombreUso))
+                            {
+                                Error($"La variable '{nombreUso}' no ha sido declarada");
+                            }
+
+                            // Consumir '='
+                            Avanzar();
+
+                            // Consumir toda la expresión sin volver a validar '='
+                            while (token != ";" && token != "Fin")
+                            {
+                                if (token == "identificador")
+                                {
+                                    string subUso = valorToken;
+                                    if (!VariableDeclarada(subUso) && !ExisteFuncion(subUso))
+                                    {
+                                        Error($"La variable '{subUso}' no ha sido declarada");
+                                    }
+                                }
+
+                                Avanzar();
+                            }
+
+                            if (token == ";")
+                                Avanzar();
+
+                            continue; // ← MUY IMPORTANTE
                         }
                         else if (token == "(")
                         {
@@ -697,7 +733,7 @@ namespace Practica2
 
             if (token == "}")
             {
-                SalirAmbito();
+                if (crearAmbito) SalirAmbito();
                 Avanzar();
             }
             else if (token == "Fin")
@@ -973,12 +1009,10 @@ namespace Practica2
                 }
             }
 
-            EntrarAmbito();
             if (token == "{")
             {
                 TablaFunciones.Add(funcion);
                 Bloque_Codigo();
-                SalirAmbito();
             }
             else
             {
