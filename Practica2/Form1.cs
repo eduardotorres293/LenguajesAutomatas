@@ -58,80 +58,7 @@ namespace Practica2
         int direccionActual = 0;
         string tipoActual = "";
 
-        private void abrirToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog VentanaAbrir = new OpenFileDialog();
-            VentanaAbrir.Filter = "Texto|*.c";
-            if (VentanaAbrir.ShowDialog() == DialogResult.OK)
-            {
-                archivo = VentanaAbrir.FileName;
-                using (StreamReader LeerF = new StreamReader(archivo))
-                {
-                    richTextBox1.Text = LeerF.ReadToEnd();
-                }
-            }
-            this.Text = "Mi Compilador - " + archivo;
-            analizarToolStripMenuItem.Enabled = true;
-        }
-        private void guardar()
-        {
-            SaveFileDialog VentanaGuardar = new SaveFileDialog();
-            VentanaGuardar.Filter = "Texto|*.c";
-            if (archivo != null)
-            {
-                using (StreamWriter EscribirF = new StreamWriter(archivo))
-                {
-                    EscribirF.Write(richTextBox1.Text);
-                }
-            }
-            else
-            {
-                if (VentanaGuardar.ShowDialog() == DialogResult.OK)
-                {
-                    archivo = VentanaGuardar.FileName;
-                    using (StreamWriter EscribirF = new StreamWriter(archivo))
-                    {
-                        EscribirF.Write(richTextBox1.Text);
-                    }
-                }
-            }
-            this.Text = "Mi Compilador - " + archivo;
-        }
-        private void guardarToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            guardar();
-        }
-        private void nuevoToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            richTextBox1.Clear();
-            archivo = null;
-        }
-        private void guardarComoToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            SaveFileDialog VentanaGuardar = new SaveFileDialog();
-            VentanaGuardar.Filter = "Texto|*.c";
-            if (VentanaGuardar.ShowDialog() == DialogResult.OK)
-            {
-                archivo = VentanaGuardar.FileName;
-                using (StreamWriter EscribirF = new StreamWriter(archivo))
-                {
-                    EscribirF.Write(richTextBox1.Text);
-                }
-            }
-            this.Text = "Mi Compilador - " + archivo;
-        }
-        private void salirToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            DialogResult Salir = MessageBox.Show(
-                "¿Estás seguro que deseas salir?",
-                "Confirmar salida",
-                MessageBoxButtons.OKCancel);
 
-            if (Salir == DialogResult.OK)
-            {
-                Application.Exit();
-            }
-        }
         private char Tipo_caracter(int caracter)
         {
             if ((caracter >= 65 && caracter <= 90) || (caracter >= 97 && caracter <= 122)) return 'l';
@@ -187,22 +114,6 @@ namespace Practica2
             i_caracter = Leer.Read();
             if (i_caracter != 39) Error(39);
         }
-        private void Error(int i_caracter)
-        {
-            richTextBox2.AppendText("Error léxico " + (char)i_caracter + ", línea " + Numero_linea + "\n");
-            N_error++;
-            i_caracter = Leer.Read();
-        }
-        private void Error(string mensaje)
-        {
-            richTextBox2.AppendText("Error: " + mensaje + ", línea " + Numero_linea + "\n");
-            N_error++;
-        }
-        private void Error(string tokenLocal, string esperado)
-        {
-            richTextBox2.AppendText($"Error: se esperaba '{esperado}', pero se encontró '{tokenLocal}', línea {Numero_linea}\n");
-            N_error++;
-        }
         private void Archivo_Libreria()
         {
             i_caracter = Leer.Read();
@@ -248,104 +159,6 @@ namespace Practica2
             {
                 Escribir.Write("numero\n");
             }
-        }
-        private void richTextBox1_TextChanged(object sender, EventArgs e)
-        {
-            analizarToolStripMenuItem.Enabled = true;
-        }
-        private bool Comentario()
-        {
-            i_caracter = Leer.Read();
-            switch (i_caracter)
-            {
-                case 47:
-                    do
-                    {
-                        i_caracter = Leer.Read();
-                    } while (i_caracter != 10 && i_caracter != -1);
-                    return true;
-                case 42:
-                    do
-                    {
-                        do
-                        {
-                            i_caracter = Leer.Read();
-                            if (i_caracter == 10)
-                            {
-                                Numero_linea++;
-                            }
-                        } while (i_caracter != 42 && i_caracter != -1);
-                        i_caracter = Leer.Read();
-                    } while (i_caracter != 47 && i_caracter != -1);
-                    if (i_caracter == -1)
-                    {
-                        Error(i_caracter);
-                    }
-                    i_caracter = Leer.Read();
-                    return true;
-                default: return false;
-            }
-        }
-        private void analizarToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            richTextBox2.Text = "";
-            guardar();
-
-            elemento = "";
-            N_error = 0;
-            Numero_linea = 1;
-
-            if (archivo == null)
-            {
-                MessageBox.Show("No hay archivo cargado.");
-                return;
-            }
-
-            archivoback = archivo.Remove(archivo.Length - 1) + "back";
-            Escribir = new StreamWriter(archivoback);
-            Leer = new StreamReader(archivo);
-
-            i_caracter = Leer.Read();
-
-            do
-            {
-                elemento = "";
-
-                if ((char)i_caracter == '/')
-                {
-                    if (Comentario())
-                    {
-                        Escribir.Write("Comentario\n");
-                        continue;
-                    }
-                }
-
-                switch (Tipo_caracter(i_caracter))
-                {
-                    case 'l': Identificador(); break;
-                    case 'd': Numero(); break;
-                    case 's':
-                        Simbolo();
-                        Escribir.Write(elemento);
-                        if (Tipo_caracter(i_caracter) == 's')
-                            i_caracter = Leer.Read();
-                        else
-                            i_caracter = Leer.Read();
-                        break;
-                    case '"': Cadena(); Escribir.Write("Cadena\n"); i_caracter = Leer.Read(); break;
-                    case 'c': Caracter(); Escribir.Write("Caracter\n"); i_caracter = Leer.Read(); break;
-                    case 'n': i_caracter = Leer.Read(); Numero_linea++; Escribir.Write("LF\n"); break;
-                    case 'e': i_caracter = Leer.Read(); break;
-                    default: Error(i_caracter); break;
-                }
-            } while (i_caracter != -1);
-
-            Escribir.Write("Fin\n");
-
-            richTextBox2.AppendText("Errores: " + N_error + "\n");
-            Escribir.Close();
-            Leer.Close();
-            AnalizadorSintactico();
         }
         private void Cabecera()
         {
@@ -1006,6 +819,196 @@ namespace Practica2
             {
                 Error("Se esperaba '{' para iniciar el cuerpo de la función");
             }
+        }
+
+
+        private void abrirToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog VentanaAbrir = new OpenFileDialog();
+            VentanaAbrir.Filter = "Texto|*.c";
+            if (VentanaAbrir.ShowDialog() == DialogResult.OK)
+            {
+                archivo = VentanaAbrir.FileName;
+                using (StreamReader LeerF = new StreamReader(archivo))
+                {
+                    richTextBox1.Text = LeerF.ReadToEnd();
+                }
+            }
+            this.Text = "Mi Compilador - " + archivo;
+            analizarToolStripMenuItem.Enabled = true;
+        }
+        private void guardar()
+        {
+            SaveFileDialog VentanaGuardar = new SaveFileDialog();
+            VentanaGuardar.Filter = "Texto|*.c";
+            if (archivo != null)
+            {
+                using (StreamWriter EscribirF = new StreamWriter(archivo))
+                {
+                    EscribirF.Write(richTextBox1.Text);
+                }
+            }
+            else
+            {
+                if (VentanaGuardar.ShowDialog() == DialogResult.OK)
+                {
+                    archivo = VentanaGuardar.FileName;
+                    using (StreamWriter EscribirF = new StreamWriter(archivo))
+                    {
+                        EscribirF.Write(richTextBox1.Text);
+                    }
+                }
+            }
+            this.Text = "Mi Compilador - " + archivo;
+        }
+        private void guardarToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            guardar();
+        }
+        private void nuevoToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            richTextBox1.Clear();
+            archivo = null;
+        }
+        private void guardarComoToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog VentanaGuardar = new SaveFileDialog();
+            VentanaGuardar.Filter = "Texto|*.c";
+            if (VentanaGuardar.ShowDialog() == DialogResult.OK)
+            {
+                archivo = VentanaGuardar.FileName;
+                using (StreamWriter EscribirF = new StreamWriter(archivo))
+                {
+                    EscribirF.Write(richTextBox1.Text);
+                }
+            }
+            this.Text = "Mi Compilador - " + archivo;
+        }
+        private void salirToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            DialogResult Salir = MessageBox.Show(
+                "¿Estás seguro que deseas salir?",
+                "Confirmar salida",
+                MessageBoxButtons.OKCancel);
+
+            if (Salir == DialogResult.OK)
+            {
+                Application.Exit();
+            }
+        }
+        private void richTextBox1_TextChanged(object sender, EventArgs e)
+        {
+            analizarToolStripMenuItem.Enabled = true;
+        }
+        private bool Comentario()
+        {
+            i_caracter = Leer.Read();
+            switch (i_caracter)
+            {
+                case 47:
+                    do
+                    {
+                        i_caracter = Leer.Read();
+                    } while (i_caracter != 10 && i_caracter != -1);
+                    return true;
+                case 42:
+                    do
+                    {
+                        do
+                        {
+                            i_caracter = Leer.Read();
+                            if (i_caracter == 10)
+                            {
+                                Numero_linea++;
+                            }
+                        } while (i_caracter != 42 && i_caracter != -1);
+                        i_caracter = Leer.Read();
+                    } while (i_caracter != 47 && i_caracter != -1);
+                    if (i_caracter == -1)
+                    {
+                        Error(i_caracter);
+                    }
+                    i_caracter = Leer.Read();
+                    return true;
+                default: return false;
+            }
+        }
+        private void analizarToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            richTextBox2.Text = "";
+            guardar();
+
+            elemento = "";
+            N_error = 0;
+            Numero_linea = 1;
+
+            if (archivo == null)
+            {
+                MessageBox.Show("No hay archivo cargado.");
+                return;
+            }
+
+            archivoback = archivo.Remove(archivo.Length - 1) + "back";
+            Escribir = new StreamWriter(archivoback);
+            Leer = new StreamReader(archivo);
+
+            i_caracter = Leer.Read();
+
+            do
+            {
+                elemento = "";
+
+                if ((char)i_caracter == '/')
+                {
+                    if (Comentario())
+                    {
+                        Escribir.Write("Comentario\n");
+                        continue;
+                    }
+                }
+
+                switch (Tipo_caracter(i_caracter))
+                {
+                    case 'l': Identificador(); break;
+                    case 'd': Numero(); break;
+                    case 's':
+                        Simbolo();
+                        Escribir.Write(elemento);
+                        if (Tipo_caracter(i_caracter) == 's')
+                            i_caracter = Leer.Read();
+                        else
+                            i_caracter = Leer.Read();
+                        break;
+                    case '"': Cadena(); Escribir.Write("Cadena\n"); i_caracter = Leer.Read(); break;
+                    case 'c': Caracter(); Escribir.Write("Caracter\n"); i_caracter = Leer.Read(); break;
+                    case 'n': i_caracter = Leer.Read(); Numero_linea++; Escribir.Write("LF\n"); break;
+                    case 'e': i_caracter = Leer.Read(); break;
+                    default: Error(i_caracter); break;
+                }
+            } while (i_caracter != -1);
+
+            Escribir.Write("Fin\n");
+
+            richTextBox2.AppendText("Errores: " + N_error + "\n");
+            Escribir.Close();
+            Leer.Close();
+            AnalizadorSintactico();
+        }
+        private void Error(int i_caracter)
+        {
+            richTextBox2.AppendText("Error léxico " + (char)i_caracter + ", línea " + Numero_linea + "\n");
+            N_error++;
+            i_caracter = Leer.Read();
+        }
+        private void Error(string mensaje)
+        {
+            richTextBox2.AppendText("Error: " + mensaje + ", línea " + Numero_linea + "\n");
+            N_error++;
+        }
+        private void Error(string tokenLocal, string esperado)
+        {
+            richTextBox2.AppendText($"Error: se esperaba '{esperado}', pero se encontró '{tokenLocal}', línea {Numero_linea}\n");
+            N_error++;
         }
     }
 }
