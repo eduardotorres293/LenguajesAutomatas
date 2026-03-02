@@ -11,6 +11,7 @@ namespace Practica2
         public Form1()
         {
             InitializeComponent();
+            TablaFunciones.Add(new SimboloFuncion("printf", "int"));
             analizarToolStripMenuItem.Enabled = false;
         }
         private List<string> P_Reservadas = new List<string>()
@@ -52,9 +53,52 @@ namespace Practica2
             }
         }
 
-        List<SimboloVariable> TablaVariables = new List<SimboloVariable>();
         List<SimboloFuncion> TablaFunciones = new List<SimboloFuncion>();
 
+        Stack<List<SimboloVariable>> PilaAmbitos = new Stack<List<SimboloVariable>>();
+
+        private void EntrarAmbito()
+        {
+            PilaAmbitos.Push(new List<SimboloVariable>());
+        }
+
+        private void SalirAmbito()
+        {
+            if (PilaAmbitos.Count > 0)
+                PilaAmbitos.Pop();
+        }
+
+        private bool ExisteVariableEnAmbitoActual(string nombre)
+        {
+            if (PilaAmbitos.Count == 0) return false;
+            return PilaAmbitos.Peek().Any(v => v.Nombre == nombre);
+        }
+
+        private bool VariableDeclarada(string nombre)
+        {
+            foreach (var ambito in PilaAmbitos)
+            {
+                if (ambito.Any(v => v.Nombre == nombre))
+                    return true;
+            }
+            return false;
+        }
+
+        private void AgregarVariable(string nombre)
+        {
+            if (PilaAmbitos.Count == 0)
+                EntrarAmbito();
+
+            PilaAmbitos.Peek().Add(
+                new SimboloVariable(nombre, tipoActual, direccionActual)
+            );
+
+            direccionActual += 4;
+        }
+        private bool ExisteFuncion(string nombre)
+        {
+            return TablaFunciones.Any(f => f.Nombre == nombre);
+        }
         int direccionActual = 0;
         string tipoActual = "";
 
@@ -213,6 +257,8 @@ namespace Practica2
             Numero_linea = 1;
             Leer = new StreamReader(archivoback);
             Avanzar();
+            PilaAmbitos.Clear();
+            EntrarAmbito();
             Cabecera();
             Leer.Close();
         }
@@ -262,7 +308,11 @@ namespace Practica2
             tipoActual = token;
             Avanzar();
 
-            if (token == null) { Error("Declaración incompleta"); return; }
+            if (token == null)
+            {
+                Error("Declaración incompleta");
+                return;
+            }
 
             if (token == "main")
             {
@@ -275,31 +325,53 @@ namespace Practica2
                 string nombreVariable = valorToken;
                 Avanzar();
 
-                if (token == null) { Error("Declaración incompleta"); return; }
-
-                if (token == "-")
+                if (token == null)
                 {
-                    Error("Token inesperado '-'. ¿Quisiste usar '='?");
-                    while (token != ";" && token != "LF" && token != "Fin") Avanzar();
-                    if (token == ";") Avanzar();
+                    Error("Declaración incompleta");
                     return;
                 }
 
                 switch (token)
                 {
                     case ";":
-                        TablaVariables.Add(new SimboloVariable(nombreVariable, tipoActual, direccionActual));
-                        direccionActual += 4;
+
+                        if (ExisteVariableEnAmbitoActual(nombreVariable))
+                        {
+                            Error($"La variable '{nombreVariable}' ya fue declarada en este ámbito");
+                        }
+                        else
+                        {
+                            AgregarVariable(nombreVariable);
+                        }
+
                         Avanzar();
                         return;
 
                     case "=":
-                        TablaVariables.Add(new SimboloVariable(nombreVariable, tipoActual, direccionActual));
-                        direccionActual += 4;
+
+                        if (ExisteVariableEnAmbitoActual(nombreVariable))
+                        {
+                            Error($"La variable '{nombreVariable}' ya fue declarada en este ámbito");
+                        }
+                        else
+                        {
+                            AgregarVariable(nombreVariable);
+                        }
+
                         Dec_VGlobal();
                         return;
 
                     case "[":
+
+                        if (ExisteVariableEnAmbitoActual(nombreVariable))
+                        {
+                            Error($"La variable '{nombreVariable}' ya fue declarada en este ámbito");
+                        }
+                        else
+                        {
+                            AgregarVariable(nombreVariable);
+                        }
+
                         D_Arreglos();
                         return;
 
@@ -308,17 +380,8 @@ namespace Practica2
                         return;
 
                     default:
-                        if (token == "numero" || token == "numero_real" || token == "caracter" || token == "identificador")
-                        {
-                            Error($"Falta el signo '=' antes de '{token}'");
-                            Avanzar();
-                            if (token == ";") Avanzar();
-                        }
-                        else
-                        {
-                            Error($"Se esperaba ';' o '=', pero se encontró '{token}'");
-                            if (token != "Fin" && token != "}") Avanzar();
-                        }
+                        Error($"Se esperaba ';', '=', '[' o '(' pero se encontró '{token}'");
+                        Avanzar();
                         return;
                 }
             }
@@ -500,6 +563,7 @@ namespace Practica2
         }
         private void Bloque_Codigo()
         {
+            EntrarAmbito();
             Avanzar();
 
             while (token != "}" && token != "Fin" && token != null)
@@ -532,30 +596,46 @@ namespace Practica2
                         break;
 
                     case "identificador":
+
+                        string nombreUso = valorToken;
                         Avanzar();
 
-                        if (token == ";")
+                        if (token == "(")
                         {
-                            Error("Falta el tipo de dato en la declaración de variable");
-                            Avanzar();
-                            break;
-                        }
-
-                        string anterior = "";
-
-                        while (token != ";" && token != "Fin")
-                        {
-                            if ((anterior == "identificador" || anterior == "numero" || anterior == "numero_real") &&
-                                (token == "identificador" || token == "numero" || token == "numero_real"))
+                            if (!ExisteFuncion(nombreUso))
                             {
-                                Error("Falta operador entre valores en la expresión");
+                                Error($"La función '{nombreUso}' no ha sido declarada");
                             }
 
-                            anterior = token;
+                            int balance = 1;
                             Avanzar();
+
+                            while (balance > 0 && token != "Fin")
+                            {
+                                if (token == "(") balance++;
+                                else if (token == ")") balance--;
+
+                                Avanzar();
+                            }
+
+                            if (token == ";") Avanzar();
+                        }
+                        else
+                        {
+                            if (!VariableDeclarada(nombreUso))
+                            {
+                                Error($"La variable '{nombreUso}' no ha sido declarada");
+                            }
+
+                            while (token != ";" && token != "Fin")
+                            {
+                                Avanzar();
+                            }
+
+                            if (token == ";")
+                                Avanzar();
                         }
 
-                        if (token == ";") Avanzar();
                         break;
 
                     case "LF":
@@ -581,6 +661,7 @@ namespace Practica2
 
             if (token == "}")
             {
+                SalirAmbito();
                 Avanzar();
             }
             else if (token == "Fin")
@@ -788,6 +869,11 @@ namespace Practica2
         }
         private void Definicion_Funcion(string nombreFuncion)
         {
+            if (ExisteFuncion(nombreFuncion))
+            {
+                Error($"La función '{nombreFuncion}' ya fue declarada");
+            }
+
             SimboloFuncion funcion = new SimboloFuncion(nombreFuncion, tipoActual);
             Avanzar();
 
@@ -817,6 +903,20 @@ namespace Practica2
                         return;
                     }
 
+                    string nombreParametro = valorToken;
+
+                    if (ExisteVariableEnAmbitoActual(nombreParametro))
+                    {
+                        Error($"El parámetro '{nombreParametro}' ya fue declarado");
+                    }
+                    else
+                    {
+                        PilaAmbitos.Peek().Add(
+                            new SimboloVariable(nombreParametro, tipoParametro, direccionActual)
+                        );
+                        direccionActual += 4;
+                    }
+
                     Avanzar();
 
                     if (token == ",")
@@ -837,10 +937,12 @@ namespace Practica2
                 }
             }
 
+            EntrarAmbito();
             if (token == "{")
             {
                 TablaFunciones.Add(funcion);
                 Bloque_Codigo();
+                SalirAmbito();
             }
             else
             {
