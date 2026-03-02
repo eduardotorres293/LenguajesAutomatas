@@ -542,6 +542,7 @@ namespace Practica2
             }
             else if (token == ";")
             {
+                Error("Falta expresión después de '=' en la inicialización");
                 Avanzar();
             }
             else
@@ -588,6 +589,10 @@ namespace Practica2
                         break;
 
                     case "=":
+                        Error("Asignación inválida: falta variable del lado izquierdo");
+                        Avanzar();
+                        break;
+
                     case "+":
                     case "-":
                     case "*":
@@ -637,24 +642,58 @@ namespace Practica2
 
                             // Consumir '='
                             Avanzar();
+                            string anterior = "";
+                            bool hayOperando = false;
 
-                            // Consumir toda la expresión sin volver a validar '='
-                            while (token != ";" && token != "Fin")
+                            while (token != ";" && token != "Fin" && token != "}")
                             {
+                                if (token == "return" || token == "if" || token == "while" ||
+                                    token == "for" || token == "switch" ||
+                                    token == "int" || token == "float" ||
+                                    token == "double" || token == "char" || token == "bool")
+                                {
+                                    Error("Falta ';' al final de la asignación");
+                                    return;
+                                }
+                                // Detectar dos operandos seguidos
+                                if ((anterior == "identificador" || anterior == "numero" || anterior == "numero_real") &&
+                                    (token == "identificador" || token == "numero" || token == "numero_real"))
+                                {
+                                    Error("Falta operador en la expresión");
+                                }
+
+                                // Detectar operador al inicio o doble operador
+                                if ((anterior == "" || anterior == "+" || anterior == "-" ||
+                                     anterior == "*" || anterior == "/" || anterior == "%") &&
+                                    (token == "+" || token == "*" || token == "/" || token == "%"))
+                                {
+                                    Error("Operador sin operando previo");
+                                }
+
                                 if (token == "identificador")
                                 {
                                     string subUso = valorToken;
+
                                     if (!VariableDeclarada(subUso) && !ExisteFuncion(subUso))
                                     {
                                         Error($"La variable '{subUso}' no ha sido declarada");
                                     }
+
+                                    hayOperando = true;
                                 }
 
+                                anterior = token;
                                 Avanzar();
                             }
 
                             if (token == ";")
+                            {
                                 Avanzar();
+                            }
+                            else
+                            {
+                                Error("Falta ';' al final de la asignación");
+                            }
 
                             continue; // ← MUY IMPORTANTE
                         }
