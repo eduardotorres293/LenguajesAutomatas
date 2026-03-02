@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Practica2
@@ -22,6 +23,41 @@ namespace Practica2
             "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary", "_Noreturn",
             "_Static_assert", "_Thread_local"
         };
+        class SimboloVariable
+        {
+            public string Nombre;
+            public string Tipo;
+            public int Direccion;
+
+            public SimboloVariable(string nombre, string tipo, int direccion)
+            {
+                Nombre = nombre;
+                Tipo = tipo;
+                Direccion = direccion;
+            }
+        }
+        class SimboloFuncion
+        {
+            public string Nombre;
+            public string TipoRetorno;
+            public int NumeroParametros;
+            public List<string> TiposParametros;
+
+            public SimboloFuncion(string nombre, string tipoRetorno)
+            {
+                Nombre = nombre;
+                TipoRetorno = tipoRetorno;
+                NumeroParametros = 0;
+                TiposParametros = new List<string>();
+            }
+        }
+
+        List<SimboloVariable> TablaVariables = new List<SimboloVariable>();
+        List<SimboloFuncion> TablaFunciones = new List<SimboloFuncion>();
+
+        int direccionActual = 0;
+        string tipoActual = "";
+
         private void abrirToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog VentanaAbrir = new OpenFileDialog();
@@ -402,6 +438,7 @@ namespace Practica2
         }
         private void Declaracion()
         {
+            tipoActual = token;
             Avanzar();
 
             if (token == null) { Error("Declaración incompleta"); return; }
@@ -414,6 +451,7 @@ namespace Practica2
 
             if (token == "identificador")
             {
+                string nombreVariable = token;
                 Avanzar();
 
                 if (token == null) { Error("Declaración incompleta"); return; }
@@ -429,6 +467,8 @@ namespace Practica2
                 switch (token)
                 {
                     case ";":
+                        TablaVariables.Add(new SimboloVariable(nombreVariable, tipoActual, direccionActual));
+                        direccionActual += 4;
                         Avanzar();
                         return;
 
@@ -441,7 +481,7 @@ namespace Practica2
                         return;
 
                     case "(":
-                        Definicion_Funcion();
+                        Definicion_Funcion(nombreVariable);
                         return;
 
                     default:
@@ -906,8 +946,9 @@ namespace Practica2
                 Error("Falta '{' para iniciar el cuerpo del main");
             }
         }
-        private void Definicion_Funcion()
+        private void Definicion_Funcion(string nombreFuncion)
         {
+            SimboloFuncion funcion = new SimboloFuncion(nombreFuncion, tipoActual);
             Avanzar();
 
             if (token == ")")
@@ -925,6 +966,9 @@ namespace Practica2
                         return;
                     }
 
+                    string tipoParametro = token;
+                    funcion.TiposParametros.Add(tipoParametro);
+                    funcion.NumeroParametros++;
                     Avanzar();
 
                     if (token != "identificador")
@@ -955,6 +999,7 @@ namespace Practica2
 
             if (token == "{")
             {
+                TablaFunciones.Add(funcion);
                 Bloque_Codigo();
             }
             else
