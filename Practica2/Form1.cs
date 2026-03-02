@@ -613,39 +613,39 @@ namespace Practica2
                         break;
 
                     case "identificador":
-
-                        string nombreUso = valorToken;
+                        string nombreUso = valorToken; // solo para identificadores
                         Avanzar();
 
                         if (token == "=")
                         {
+                            // Esto es una asignación, no hace falta checar como variable (ya se declaró arriba)
                             while (token != ";" && token != "Fin") Avanzar();
                             if (token == ";") Avanzar();
                         }
                         else if (token == "(")
                         {
+                            // Esto es una llamada a función
+                            if (!ExisteFuncion(nombreUso))
                             {
-                                if (!ExisteFuncion(nombreUso))
-                                {
-                                    Error($"La función '{nombreUso}' no ha sido declarada");
-                                }
-
-                                int balance = 1;
-                                Avanzar();
-
-                                while (balance > 0 && token != "Fin")
-                                {
-                                    if (token == "(") balance++;
-                                    else if (token == ")") balance--;
-
-                                    Avanzar();
-                                }
-
-                                if (token == ";") Avanzar();
+                                Error($"La función '{nombreUso}' no ha sido declarada");
                             }
+
+                            int balance = 1;
+                            Avanzar();
+
+                            while (balance > 0 && token != "Fin")
+                            {
+                                if (token == "(") balance++;
+                                else if (token == ")") balance--;
+
+                                Avanzar();
+                            }
+
+                            if (token == ";") Avanzar();
                         }
                         else
                         {
+                            // Esto es un uso de variable
                             if (!VariableDeclarada(nombreUso))
                             {
                                 Error($"La variable '{nombreUso}' no ha sido declarada");
@@ -653,13 +653,25 @@ namespace Practica2
 
                             while (token != ";" && token != "Fin")
                             {
+                                // saltar solo tokens válidos de expresiones
+                                if (token != "=" && token != "+" && token != "-" &&
+                                    token != "*" && token != "/" && token != "%" &&
+                                    token != "(" && token != ")")
+                                {
+                                    // Si es otro identificador, verificar
+                                    if (token == "identificador")
+                                    {
+                                        string subUso = valorToken;
+                                        if (!VariableDeclarada(subUso))
+                                            Error($"La variable '{subUso}' no ha sido declarada");
+                                    }
+                                }
+
                                 Avanzar();
                             }
 
-                            if (token == ";")
-                                Avanzar();
+                            if (token == ";") Avanzar();
                         }
-
                         break;
 
                     case "LF":
