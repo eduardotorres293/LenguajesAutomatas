@@ -127,6 +127,7 @@ namespace Practica2
         }
         private void Identificador()
         {
+            elemento = "";
             do
             {
                 elemento = elemento + (char)i_caracter;
@@ -136,8 +137,15 @@ namespace Practica2
             if ((char)i_caracter == '.') { Archivo_Libreria(); }
             else
             {
-                if (Palabra_Reservada()) Escribir.Write(elemento.ToLower() + "\n");
-                else Escribir.Write("identificador\n");
+                if (Palabra_Reservada())
+                {
+                    Escribir.Write(elemento.ToLower() + "\n");
+                }
+                else
+                {
+                    Escribir.Write("identificador\n");
+                    Escribir.Write(elemento + "\n");
+                }
             }
         }
         private void Numero_Real()
@@ -264,7 +272,7 @@ namespace Practica2
 
             if (token == "identificador")
             {
-                string nombreVariable = token;
+                string nombreVariable = valorToken;
                 Avanzar();
 
                 if (token == null) { Error("Declaración incompleta"); return; }
@@ -286,6 +294,8 @@ namespace Practica2
                         return;
 
                     case "=":
+                        TablaVariables.Add(new SimboloVariable(nombreVariable, tipoActual, direccionActual));
+                        direccionActual += 4;
                         Dec_VGlobal();
                         return;
 
@@ -476,11 +486,17 @@ namespace Practica2
         }
         private void Avanzar()
         {
-            do
+            token = Leer.ReadLine();
+            if (token == "LF")
             {
-                token = Leer.ReadLine();
-                if (token == "LF") Numero_linea++;
-            } while (token == "LF");
+                Numero_linea++;
+                Avanzar();
+            }
+
+            if (token == "identificador")
+            {
+                valorToken = Leer.ReadLine();
+            }
         }
         private void Bloque_Codigo()
         {
@@ -547,7 +563,18 @@ namespace Practica2
                         break;
 
                     default:
-                        Avanzar();
+                        if (token != "LF" && token != "Fin")
+                        {
+                            if (token == "+" || token == "-" || token == "*" || token == "/")
+                            {
+                                Avanzar();
+                            }
+                            else
+                            {
+                                Error("Token no reconocido en bloque: " + token);
+                                Avanzar();
+                            }
+                        }
                         break;
                 }
             }
