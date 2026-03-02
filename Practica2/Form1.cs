@@ -570,6 +570,23 @@ namespace Practica2
             {
                 switch (token)
                 {
+                    case "numero":
+                    case "numero_real":
+                    case "caracter":
+                        Avanzar();
+                        break;
+
+                    case "=":
+                    case "+":
+                    case "-":
+                    case "*":
+                    case "/":
+                    case "%":
+                    case "(":
+                    case ")":
+                    case ";":
+                        Avanzar();
+                        break;
                     case "int":
                     case "float":
                     case "double":
@@ -600,25 +617,32 @@ namespace Practica2
                         string nombreUso = valorToken;
                         Avanzar();
 
-                        if (token == "(")
+                        if (token == "=")
                         {
-                            if (!ExisteFuncion(nombreUso))
-                            {
-                                Error($"La función '{nombreUso}' no ha sido declarada");
-                            }
-
-                            int balance = 1;
-                            Avanzar();
-
-                            while (balance > 0 && token != "Fin")
-                            {
-                                if (token == "(") balance++;
-                                else if (token == ")") balance--;
-
-                                Avanzar();
-                            }
-
+                            while (token != ";" && token != "Fin") Avanzar();
                             if (token == ";") Avanzar();
+                        }
+                        else if (token == "(")
+                        {
+                            {
+                                if (!ExisteFuncion(nombreUso))
+                                {
+                                    Error($"La función '{nombreUso}' no ha sido declarada");
+                                }
+
+                                int balance = 1;
+                                Avanzar();
+
+                                while (balance > 0 && token != "Fin")
+                                {
+                                    if (token == "(") balance++;
+                                    else if (token == ")") balance--;
+
+                                    Avanzar();
+                                }
+
+                                if (token == ";") Avanzar();
+                            }
                         }
                         else
                         {
