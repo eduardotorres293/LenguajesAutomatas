@@ -16,6 +16,8 @@ namespace Practica2
         string tipoToken;
         string lexema;
         string valorToken = "";
+        private int direccionActual = 0;
+        private string tipoActual = "";
 
         /// </summary>
         private System.ComponentModel.IContainer components = null;

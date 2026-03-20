@@ -29,44 +29,20 @@ INICIO
 
 	clrf	PORTB
 
-;****************************************************************
-;Enciende el LED del bit 0 en el puerto B
-;****************************************************************
-	bsf	PORTB,0
 
 
 ;****************************************************************
 ;CICLO
 ;****************************************************************
 CICLO
+PRESIONAR
+	btfss	PORTC,0
+	goto PRESIONAR
 
-;Si RC1 = 1 ejecutar estado 2
-	btfsc	PORTC,1
-	goto	ESTADO2
-
-;Si RC0 = 1 ejecutar estado 1
+	incf PORTB, 1
+SOLTAR
 	btfsc	PORTC,0
-	goto	ESTADO1
+	goto SOLTAR
 
 	goto	CICLO
-
-;****************************************************************
-;ESTADO 1: Encender RB1
-;****************************************************************
-
-ESTADO1
-	bsf	PORTB,1
-	goto	CICLO
-
-
-;****************************************************************
-;ESTADO 2: Apagar RB0 y RB1, encender RB2
-;****************************************************************
-
-ESTADO2
-	bcf	PORTB,0
-	bcf	PORTB,1
-	bsf	PORTB,2
-	goto	CICLO
-
 	END

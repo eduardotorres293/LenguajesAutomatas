@@ -1,4 +1,4 @@
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  1
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  1
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -46,54 +46,31 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
                       00029 
 0006   0186           00030         clrf    PORTB
                       00031 
-                      00032 ;****************************************************************
-                      00033 ;Enciende el LED del bit 0 en el puerto B
+                      00032 
+                      00033 
                       00034 ;****************************************************************
-0007   1406           00035         bsf     PORTB,0
-                      00036 
-                      00037 
-                      00038 ;****************************************************************
-                      00039 ;CICLO
-                      00040 ;****************************************************************
-0008                  00041 CICLO
+                      00035 ;CICLO
+                      00036 ;****************************************************************
+0007                  00037 CICLO
+                      00038 ;Si RC0 = 1 ejecutar estado 1
+0007                  00039 PRESIONAR
+0007   1C07           00040         btfss   PORTC,0
+0008   2807           00041         goto PRESIONAR
                       00042 
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  2
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  2
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
   VALUE
 
-                      00043 ;Si RC1 = 1 ejecutar estado 2
-0008   1887           00044         btfsc   PORTC,1
-0009   280F           00045         goto    ESTADO2
-                      00046 
-                      00047 ;Si RC0 = 1 ejecutar estado 1
-000A   1807           00048         btfsc   PORTC,0
-000B   280D           00049         goto    ESTADO1
-                      00050 
-000C   2808           00051         goto    CICLO
-                      00052 
-                      00053 ;****************************************************************
-                      00054 ;ESTADO 1: Encender RB1
-                      00055 ;****************************************************************
-                      00056 
-000D                  00057 ESTADO1
-000D   1486           00058         bsf     PORTB,1
-000E   2808           00059         goto    CICLO
-                      00060 
-                      00061 
-                      00062 ;****************************************************************
-                      00063 ;ESTADO 2: Apagar RB0 y RB1, encender RB2
-                      00064 ;****************************************************************
-                      00065 
-000F                  00066 ESTADO2
-000F   1006           00067         bcf     PORTB,0
-0010   1086           00068         bcf     PORTB,1
-0011   1506           00069         bsf     PORTB,2
-0012   2808           00070         goto    CICLO
-                      00071 
-                      00072         END
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  3
+0009   0A86           00043         incf PORTB, 1
+000A                  00044 SOLTAR
+000A   1807           00045         btfsc   PORTC,0
+000B   280A           00046         goto SOLTAR
+                      00047 
+000C   2807           00048         goto    CICLO
+                      00049         END
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  3
 
 
 SYMBOL TABLE
@@ -145,14 +122,14 @@ CCPR2L                            0000001B
 CHS0                              00000003
 CHS1                              00000004
 CHS2                              00000005
-CICLO                             00000008
+CICLO                             00000007
 CKE                               00000006
 CKP                               00000004
 CREN                              00000004
 CSRC                              00000007
 D                                 00000005
 DATA_ADDRESS                      00000005
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  4
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  4
 
 
 SYMBOL TABLE
@@ -170,8 +147,6 @@ EEDATH                            0000010E
 EEIE                              00000004
 EEIF                              00000004
 EEPGD                             00000007
-ESTADO1                           0000000D
-ESTADO2                           0000000F
 F                                 00000001
 FERR                              00000002
 FSR                               00000004
@@ -211,14 +186,14 @@ OBF                               00000006
 OERR                              00000001
 OPTION_REG                        00000081
 P                                 00000004
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  5
+PCFG0                             00000000
+PCFG1                             00000001
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  5
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-PCFG0                             00000000
-PCFG1                             00000001
 PCFG2                             00000002
 PCFG3                             00000003
 PCL                               00000002
@@ -236,6 +211,7 @@ PORTC                             00000007
 PORTD                             00000008
 PORTE                             00000009
 PR2                               00000092
+PRESIONAR                         00000007
 PS0                               00000000
 PS1                               00000001
 PS2                               00000002
@@ -270,13 +246,13 @@ RC6                               00000006
 RC7                               00000007
 RC8_9                             00000006
 RC9                               00000006
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  6
+RCD8                              00000000
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  6
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-RCD8                              00000000
 RCEN                              00000003
 RCIE                              00000005
 RCIF                              00000005
@@ -305,6 +281,7 @@ R_W                               00000002
 S                                 00000003
 SEN                               00000000
 SMP                               00000007
+SOLTAR                            0000000A
 SPBRG                             00000099
 SPEN                              00000007
 SREN                              00000005
@@ -329,7 +306,7 @@ T0IF                              00000002
 T0SE                              00000004
 T1CKPS0                           00000004
 T1CKPS1                           00000005
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  7
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  7
 
 
 SYMBOL TABLE
@@ -388,7 +365,7 @@ TRISC7                            00000007
 TRISD                             00000088
 TRISD0                            00000000
 TRISD1                            00000001
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  8
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  8
 
 
 SYMBOL TABLE
@@ -447,7 +424,7 @@ _IDLOC3                           00002003
 _LP_OSC                           00003FFC
 _LVP_OFF                          00003F7F
 _LVP_ON                           00003FFF
-MPASM  5.51                     PRACTICA3.ASM   3-11-2026  11:51:21         PAGE  9
+MPASM  5.51                     PRACTICA4.ASM   3-12-2026  11:38:00         PAGE  9
 
 
 SYMBOL TABLE
@@ -470,12 +447,12 @@ __16F877                          00000001
 
 MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
 
-0000 : XXXXXXXXXXXXXXXX XXX------------- ---------------- ----------------
+0000 : XXXXXXXXXXXXX--- ---------------- ---------------- ----------------
 
 All other memory blocks unused.
 
-Program Memory Words Used:    19
-Program Memory Words Free:  8173
+Program Memory Words Used:    13
+Program Memory Words Free:  8179
 
 
 Errors   :     0

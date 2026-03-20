@@ -1,15 +1,12 @@
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  1
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  1
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
   VALUE
 
-                      00001 ;***************************************************************
-                      00002 ; Secuencia de LEDs en PORTB - PIC16F877
-                      00003 ;***************************************************************
-                      00004 
-                      00005     LIST    P=PIC16F877
-                      00006     include "P16F877.INC"
+Warning[205]: Found directive in column 1. (LIST)
+                      00001 LIST P=16F877
+                      00002         INCLUDE <P16F877.INC>
                       00001         LIST
                       00002 
                       00003 ;==========================================================================
@@ -19,99 +16,75 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00007 ;==========================================================================
                       00008 
                       00540         LIST
-                      00007 
-0000                  00008     ORG     0x00
-                      00009 
-                      00010 ;---------------------------------------------------------------
-                      00011 ; Configuración
-                      00012 ;---------------------------------------------------------------
-                      00013 
-0000                  00014 INICIO
-0000   1303           00015     bcf     STATUS,RP1
-0001   1683           00016     bsf     STATUS,RP0      ; Banco 1
+                      00003 
+2007   3F7A           00004         __CONFIG _HS_OSC & _WDT_OFF & _PWRTE_OFF & _LVP_OFF
+                      00005 
+0000                  00006         ORG 0x00
+0000   2801           00007         GOTO INICIO
+                      00008 
+                      00009 ;---------------------------------
+0001                  00010 INICIO
+0001   1683           00011         BSF STATUS, RP0      ; Cambiar a Banco 1
 Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
-0002   0186           00017     clrf    TRISB           ; PORTB como salida
-0003   1283           00018     bcf     STATUS,RP0      ; Banco 0
-                      00019 
-0004   0186           00020     clrf    PORTB           ; Apaga todos los LEDs
-                      00021 
-                      00022 ;---------------------------------------------------------------
-                      00023 ; Programa principal
-                      00024 ;---------------------------------------------------------------
-                      00025 
-0005                  00026 CICLO
-0005   3001           00027     movlw   0x01            ; 00000001
-0006   0086           00028     movwf   PORTB
-0007   201E           00029     call    DELAY
-                      00030 
-0008   3002           00031     movlw   0x02            ; 00000010
-0009   0086           00032     movwf   PORTB
-000A   201E           00033     call    DELAY
-                      00034 
-000B   3004           00035     movlw   0x04
-000C   0086           00036     movwf   PORTB
-000D   201E           00037     call    DELAY
+0002   0186           00012         CLRF TRISB           ; PORTB como salida
+0003   1283           00013         BCF STATUS, RP0      ; Regresar a Banco 0
+0004   0186           00014         CLRF PORTB           ; Apagar todos los LEDs
+                      00015 
+                      00016 ;---------------------------------
+0005                  00017 LOOP
+                      00018 
+                      00019         ; LED RB5
+0005   3020           00020         MOVLW b'00100000'
+0006   0086           00021         MOVWF PORTB
+0007   2012           00022         CALL DELAY
+                      00023 
+                      00024         ; LED RB6
+0008   3040           00025         MOVLW b'01000000'
+0009   0086           00026         MOVWF PORTB
+000A   2012           00027         CALL DELAY
+                      00028 
+                      00029         ; LED RB7
+000B   3080           00030         MOVLW b'10000000'
+000C   0086           00031         MOVWF PORTB
+000D   2012           00032         CALL DELAY
+                      00033 
+                      00034         ; LED RB3
+000E   3008           00035         MOVLW b'00001000'
+000F   0086           00036         MOVWF PORTB
+0010   2012           00037         CALL DELAY
                       00038 
-000E   3008           00039     movlw   0x08
-000F   0086           00040     movwf   PORTB
-0010   201E           00041     call    DELAY
-                      00042 
-0011   3010           00043     movlw   0x10
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  2
+0011   2805           00039         GOTO LOOP
+                      00040 
+                      00041 ;---------------------------------
+                      00042 ; Delay
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  2
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
   VALUE
 
-0012   0086           00044     movwf   PORTB
-0013   201E           00045     call    DELAY
-                      00046 
-0014   3020           00047     movlw   0x20
-0015   0086           00048     movwf   PORTB
-0016   201E           00049     call    DELAY
-                      00050 
-0017   3040           00051     movlw   0x40
-0018   0086           00052     movwf   PORTB
-0019   201E           00053     call    DELAY
-                      00054 
-001A   3080           00055     movlw   0x80
-001B   0086           00056     movwf   PORTB
-001C   201E           00057     call    DELAY
-                      00058 
-001D   2805           00059     goto    CICLO
-                      00060 
-                      00061 ;---------------------------------------------------------------
-                      00062 ; Subrutina de delay
-                      00063 ;---------------------------------------------------------------
-                      00064 
-001E                  00065 DELAY
-001E   30C8           00066     movlw   d'200'
-001F   00A0           00067     movwf   CONT1
-                      00068 
-0020                  00069 LOOP1
-0020   30FF           00070     movlw   d'255'
-0021   00A1           00071     movwf   CONT2
-                      00072 
-0022                  00073 LOOP2
-0022   0BA1           00074     decfsz  CONT2,f
-0023   2822           00075     goto    LOOP2
-                      00076 
-0024   0BA0           00077     decfsz  CONT1,f
-0025   2820           00078     goto    LOOP1
-                      00079 
-0026   0008           00080     return
-                      00081 
-                      00082 ;---------------------------------------------------------------
-                      00083 ; Variables
-                      00084 ;---------------------------------------------------------------
-                      00085 
-                      00086     CBLOCK  0x20
-  00000020            00087     CONT1
-  00000021            00088     CONT2
-                      00089     ENDC
-                      00090 
-                      00091     END
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  3
+0012                  00043 DELAY
+0012   30C8           00044         MOVLW   D'200'
+0013   00A0           00045         MOVWF   CONT1
+0014                  00046 DELAY1
+0014   30FA           00047         MOVLW   D'250'
+0015   00A1           00048         MOVWF   CONT2
+0016                  00049 DELAY2
+0016   0BA1           00050         DECFSZ  CONT2, F
+0017   2816           00051         GOTO    DELAY2
+0018   0BA0           00052         DECFSZ  CONT1, F
+0019   2814           00053         GOTO    DELAY1
+001A   0008           00054         RETURN
+                      00055 
+                      00056 ;---------------------------------
+                      00057 ; Variables
+                      00058         CBLOCK 0x20
+  00000020            00059         CONT1
+  00000021            00060         CONT2
+                      00061         ENDC
+                      00062 
+                      00063         END
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  3
 
 
 SYMBOL TABLE
@@ -163,23 +136,24 @@ CCPR2L                            0000001B
 CHS0                              00000003
 CHS1                              00000004
 CHS2                              00000005
-CICLO                             00000005
 CKE                               00000006
 CKP                               00000004
 CONT1                             00000020
 CONT2                             00000021
 CREN                              00000004
 CSRC                              00000007
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  4
+D                                 00000005
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  4
 
 
 SYMBOL TABLE
   LABEL                             VALUE 
 
-D                                 00000005
 DATA_ADDRESS                      00000005
 DC                                00000001
-DELAY                             0000001E
+DELAY                             00000012
+DELAY1                            00000014
+DELAY2                            00000016
 D_A                               00000005
 D_NOT_A                           00000005
 EEADR                             0000010D
@@ -206,14 +180,13 @@ I2C_STOP                          00000004
 IBF                               00000007
 IBOV                              00000005
 INDF                              00000000
-INICIO                            00000000
+INICIO                            00000001
 INTCON                            0000000B
 INTE                              00000004
 INTEDG                            00000006
 INTF                              00000001
 IRP                               00000007
-LOOP1                             00000020
-LOOP2                             00000022
+LOOP                              00000005
 NOT_A                             00000005
 NOT_ADDRESS                       00000005
 NOT_BO                            00000000
@@ -229,7 +202,7 @@ NOT_TX8                           00000006
 NOT_W                             00000002
 NOT_WRITE                         00000002
 OBF                               00000006
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  5
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  5
 
 
 SYMBOL TABLE
@@ -288,7 +261,7 @@ RC3                               00000003
 RC4                               00000004
 RC5                               00000005
 RC6                               00000006
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  6
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  6
 
 
 SYMBOL TABLE
@@ -347,7 +320,7 @@ SYNC                              00000004
 T0CS                              00000005
 T0IE                              00000005
 T0IF                              00000002
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  7
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  7
 
 
 SYMBOL TABLE
@@ -406,7 +379,7 @@ TRISC4                            00000004
 TRISC5                            00000005
 TRISC6                            00000006
 TRISC7                            00000007
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  8
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  8
 
 
 SYMBOL TABLE
@@ -465,7 +438,7 @@ _IDLOC0                           00002000
 _IDLOC1                           00002001
 _IDLOC2                           00002002
 _IDLOC3                           00002003
-MPASM  5.51                     PRACTICA2.ASM   3-1-2026  16:55:59         PAGE  9
+MPASM  5.51                     PRACTICA2.ASM   3-4-2026  22:31:52         PAGE  9
 
 
 SYMBOL TABLE
@@ -491,16 +464,17 @@ __16F877                          00000001
 
 MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
 
-0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXX--------- ----------------
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXX----- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
 
 All other memory blocks unused.
 
-Program Memory Words Used:    39
-Program Memory Words Free:  8153
+Program Memory Words Used:    27
+Program Memory Words Free:  8165
 
 
 Errors   :     0
-Warnings :     0 reported,     0 suppressed
+Warnings :     1 reported,     0 suppressed
 Messages :     1 reported,     0 suppressed
 
 

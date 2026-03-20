@@ -1,91 +1,63 @@
-;***************************************************************
-; Secuencia de LEDs en PORTB - PIC16F877
-;***************************************************************
+LIST P=16F877
+        INCLUDE <P16F877.INC>
 
-    LIST    P=PIC16F877
-    include "P16F877.INC"
+        __CONFIG _HS_OSC & _WDT_OFF & _PWRTE_OFF & _LVP_OFF
 
-    ORG     0x00
+        ORG 0x00
+        GOTO INICIO
 
-;---------------------------------------------------------------
-; Configuración
-;---------------------------------------------------------------
-
+;---------------------------------
 INICIO
-    bcf     STATUS,RP1
-    bsf     STATUS,RP0      ; Banco 1
-    clrf    TRISB           ; PORTB como salida
-    bcf     STATUS,RP0      ; Banco 0
+        BSF STATUS, RP0      ; Cambiar a Banco 1
+        CLRF TRISB           ; PORTB como salida
+        BCF STATUS, RP0      ; Regresar a Banco 0
+        CLRF PORTB           ; Apagar todos los LEDs
 
-    clrf    PORTB           ; Apaga todos los LEDs
+;---------------------------------
+LOOP
 
-;---------------------------------------------------------------
-; Programa principal
-;---------------------------------------------------------------
+        ; LED RB5
+        MOVLW b'00100000'
+        MOVWF PORTB
+        CALL DELAY
 
-CICLO
-    movlw   0x01            ; 00000001
-    movwf   PORTB
-    call    DELAY
+        ; LED RB6
+        MOVLW b'01000000'
+        MOVWF PORTB
+        CALL DELAY
 
-    movlw   0x02            ; 00000010
-    movwf   PORTB
-    call    DELAY
+        ; LED RB7
+        MOVLW b'10000000'
+        MOVWF PORTB
+        CALL DELAY
 
-    movlw   0x04
-    movwf   PORTB
-    call    DELAY
+        ; LED RB3
+        MOVLW b'00001000'
+        MOVWF PORTB
+        CALL DELAY
 
-    movlw   0x08
-    movwf   PORTB
-    call    DELAY
+        GOTO LOOP
 
-    movlw   0x10
-    movwf   PORTB
-    call    DELAY
-
-    movlw   0x20
-    movwf   PORTB
-    call    DELAY
-
-    movlw   0x40
-    movwf   PORTB
-    call    DELAY
-
-    movlw   0x80
-    movwf   PORTB
-    call    DELAY
-
-    goto    CICLO
-
-;---------------------------------------------------------------
-; Subrutina de delay
-;---------------------------------------------------------------
-
+;---------------------------------
+; Delay
 DELAY
-    movlw   d'200'
-    movwf   CONT1
+        MOVLW   D'200'
+        MOVWF   CONT1
+DELAY1
+        MOVLW   D'250'
+        MOVWF   CONT2
+DELAY2
+        DECFSZ  CONT2, F
+        GOTO    DELAY2
+        DECFSZ  CONT1, F
+        GOTO    DELAY1
+        RETURN
 
-LOOP1
-    movlw   d'255'
-    movwf   CONT2
-
-LOOP2
-    decfsz  CONT2,f
-    goto    LOOP2
-
-    decfsz  CONT1,f
-    goto    LOOP1
-
-    return
-
-;---------------------------------------------------------------
+;---------------------------------
 ; Variables
-;---------------------------------------------------------------
+        CBLOCK 0x20
+        CONT1
+        CONT2
+        ENDC
 
-    CBLOCK  0x20
-    CONT1
-    CONT2
-    ENDC
-
-    END
+        END
